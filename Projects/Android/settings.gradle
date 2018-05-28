@@ -1,0 +1,9 @@
+rootProject.projectDir = new File(settingsDir, '../../../../..')
+rootProject.name = "ovrvnc"
+
+include ':', \
+	'VrAppFramework:Projects:Android', \
+	'VrAppSupport:VrLocale:Projects:Android', \
+	'VrAppSupport:VrSound:Projects:Android', \
+	'VrSamples:Native:ovrvnc:Projects:Android', \
+	'VrAppSupport:VrGUI:Projects:Android'
