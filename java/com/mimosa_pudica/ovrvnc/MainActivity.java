@@ -9,7 +9,7 @@ Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
 
 
 *************************************************************************************/
-package com.mimosa_pudica.ovrvnc;
+package net.mimosa_pudica.ovrvnc;
 
 import android.os.Bundle;
 import android.util.Log;

@@ -22,7 +22,7 @@ using namespace OVR;
 #if defined( OVR_OS_ANDROID )
 extern "C" {
 
-jlong Java_com_mimosa_pudica_ovrvnc_MainActivity_nativeSetAppInterface( JNIEnv * jni, jclass clazz, jobject activity,
+jlong Java_net_mimosa_1pudica_ovrvnc_MainActivity_nativeSetAppInterface( JNIEnv * jni, jclass clazz, jobject activity,
 		jstring fromPackageName, jstring commandString, jstring uriString )
 {
 	LOG( "nativeSetAppInterface" );

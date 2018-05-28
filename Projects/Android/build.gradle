@@ -12,7 +12,7 @@ android {
   project.archivesBaseName = "ovrvnc"
 
   defaultConfig {
-    applicationId "com.mimosa_pudica.ovrvnc"
+    applicationId "net.mimosa_pudica.ovrvnc"
 
     // override app plugin abiFilters to test experimental 64-bit support
     externalNativeBuild {
