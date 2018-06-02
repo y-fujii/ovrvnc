@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <queue>
 #include <thread>
 #include <mutex>
 #include <rfb/rfbclient.h>
@@ -34,7 +35,7 @@ struct vnc_thread_t {
 	region_t get_update_region() {
 		region_t tmp;
 		{
-			std::lock_guard<std::mutex> lock( _mutex );
+			std::lock_guard<std::mutex> lock( _region_mutex );
 			tmp = _region;
 			_region.x0 = _region.w;
 			_region.y0 = _region.h;
@@ -44,12 +45,23 @@ struct vnc_thread_t {
 		return tmp;
 	}
 
+	void push_mouse_event( int x, int y, bool btn ) {
+		std::lock_guard<std::mutex> lock( _pointer_mutex );
+		_pointer_events.push( { x, y, btn } );
+	}
+
 private:
+	struct _pointer_event_t {
+		int  x;
+		int  y;
+		bool button;
+	};
+
 	static rfbBool _on_resize( rfbClient* rfb ) {
 		auto const self = reinterpret_cast<vnc_thread_t*>( rfbClientGetClientData( rfb, nullptr ) );
 		{
 			auto& region = self->_region;
-			std::lock_guard<std::mutex> lock( self->_mutex );
+			std::lock_guard<std::mutex> lock( self->_region_mutex );
 			region.buf = std::make_shared<std::vector<uint32_t>>( rfb->width * rfb->height, ~0u );
 			region.w   = rfb->width;
 			region.h   = rfb->height;
@@ -72,7 +84,7 @@ private:
 		}
 		{
 			auto& region = self->_region;
-			std::lock_guard<std::mutex> lock( self->_mutex );
+			std::lock_guard<std::mutex> lock( self->_region_mutex );
 			region.x0 = std::min( region.x0, x0 );
 			region.y0 = std::min( region.y0, y0 );
 			region.x1 = std::min( std::max( region.x1, x0 + w ), region.w );
@@ -98,7 +110,20 @@ private:
 			}
 
 			while( true ) {
-				int const i = WaitForMessage( rfb, 100'000 );
+				{
+					std::lock_guard<std::mutex> lock( _pointer_mutex );
+					while( !_pointer_events.empty() ) {
+						// XXX: reduce pointer move events.
+						_pointer_event_t const& ev = _pointer_events.front();
+						if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ? rfbButton1Mask : 0 ) ) {
+							__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "SendPointerEvent" );
+							goto error;
+						}
+						_pointer_events.pop();
+					}
+				}
+
+				int const i = WaitForMessage( rfb, 500 );
 				if( i < 0 ) {
 					__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "WaitForMessage" );
 					break;
@@ -111,11 +136,14 @@ private:
 					break;
 				}
 			}
+error:
 			rfbClientCleanup( rfb );
 		}
 	}
 
-	region_t    _region;
-	std::mutex  _mutex;
-	std::thread _thread;
+	region_t                     _region;
+	std::mutex                   _region_mutex;
+	std::queue<_pointer_event_t> _pointer_events;
+	std::mutex                   _pointer_mutex;
+	std::thread                  _thread;
 };

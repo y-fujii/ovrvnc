@@ -7,6 +7,8 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wextra-semi"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
+#include "VrApi_Input.h"
 #include "App.h"
 #include "SceneView.h"
 #include "GuiSys.h"
@@ -32,8 +34,9 @@ namespace std {
 };
 
 struct application_t: OVR::VrAppInterface {
-	inline static std::string const host = "192.168.179.3";
-	inline static int const         port = 5900;
+	inline static std::string const host         = "192.168.179.3";
+	inline static int const         port         = 5902;
+	inline static float const       display_unit = 2560.0f;
 
 	application_t() {
 		_gui = std::unique_ptr<OVR::OvrGuiSys>( OVR::OvrGuiSys::Create() );
@@ -41,10 +44,15 @@ struct application_t: OVR::VrAppInterface {
 
 	virtual void Configure( OVR::ovrSettings& settings ) override {
 		settings.UseSrgbFramebuffer = true;
+		settings.RenderMode         = OVR::RENDERMODE_MULTIVIEW;
+		settings.TrackingTransform  = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
+		settings.CpuLevel           = 1;
+		settings.GpuLevel           = 1;
 	}
 
 	virtual void EnteredVrMode( OVR::ovrIntentType const intent_type, char const*, char const*, char const* ) override {
 		if( intent_type == OVR::INTENT_LAUNCH ) {
+			vrapi_SetPropertyInt( app->GetJava(), VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER, 1 );
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
 			_init_gui();
 			_vnc_thread.run( host, port );
@@ -76,6 +84,7 @@ struct application_t: OVR::VrAppInterface {
 		res.DisplayTime  = frame.PredictedDisplayTimeInSeconds;
 		res.SwapInterval = app->GetSwapInterval();
 
+		_handle_inputs( frame.PredictedDisplayTimeInSeconds );
 		_sync_screen();
 
 		/* projection layer (currently unused). */ {
@@ -100,15 +109,15 @@ struct application_t: OVR::VrAppInterface {
 			layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
 			layer.HeadPose = frame.Tracking.HeadPose;
 			for( size_t eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; ++eye ) {
-				layer.Textures[eye].ColorSwapChain         = _screen.get();
-				layer.Textures[eye].SwapChainIndex         = 0;
+				layer.Textures[eye].ColorSwapChain = _screen.get();
+				layer.Textures[eye].SwapChainIndex = 0;
 
 				ovrMatrix4f const m_mv = ovrMatrix4f_Multiply( &frame.Tracking.Eye[eye].ViewMatrix, &m_m );
 				layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_Inverse( &m_mv );
 
 				// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
-				float const sx = 2560.0f / float( _screen_w );
-				float const sy = float( 2560.0 * 2.0 / (std::sqrt( 3.0 ) * M_PI) ) / float( _screen_h );
+				float const sx = display_unit / float( _screen_w );
+				float const sy = float( 2.0 * display_unit / (std::sqrt( 3.0 ) * M_PI) ) / float( _screen_h );
 				layer.Textures[eye].TextureMatrix.M[0][0] = sx;
 				layer.Textures[eye].TextureMatrix.M[1][1] = sy;
 				layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * sx + 0.5f;
@@ -162,6 +171,77 @@ private:
 		glBindTexture( GL_TEXTURE_2D, 0 );
 	}
 
+
+	void _handle_inputs( double const time ) {
+		ovrMobile* const mobile = app->GetOvrMobile();
+		for( uint32_t i = 0; true; ++i ) {
+			ovrInputCapabilityHeader caps_header;
+			if( vrapi_EnumerateInputDevices( mobile, i, &caps_header ) < 0 ) {
+				break;
+			}
+
+			bool button = false;
+			if ( (caps_header.Type & ovrControllerType_TrackedRemote) != 0 ) {
+				ovrInputTrackedRemoteCapabilities caps;
+				caps.Header = caps_header;
+				if( vrapi_GetInputDeviceCapabilities( mobile, &caps.Header ) != ovrSuccess ) {
+					continue;
+				}
+				if( (caps.ControllerCapabilities & ovrControllerCaps_HasOrientationTracking) == 0 ||
+					(caps.ButtonCapabilities & ovrButton_A) == 0 ) {
+					continue;
+				}
+				ovrInputStateTrackedRemote state;
+				state.Header.ControllerType = ovrControllerType_TrackedRemote;
+				if( vrapi_GetCurrentInputState( mobile, caps_header.DeviceID, &state.Header ) != ovrSuccess ) {
+					continue;
+				}
+				button = (state.Buttons & ovrButton_A) != 0;
+			}
+			else if ( (caps_header.Type & ovrControllerType_Headset) != 0 ) {
+				ovrInputHeadsetCapabilities caps;
+				caps.Header = caps_header;
+				if( vrapi_GetInputDeviceCapabilities( mobile, &caps.Header ) != ovrSuccess ) {
+					continue;
+				}
+				if( (caps.ControllerCapabilities & ovrControllerCaps_HasOrientationTracking) == 0 ||
+					(caps.ButtonCapabilities & ovrButton_A) == 0 ) {
+					continue;
+				}
+				ovrInputStateHeadset state;
+				state.Header.ControllerType = ovrControllerType_Headset;
+				if( vrapi_GetCurrentInputState( mobile, caps_header.DeviceID, &state.Header ) != ovrSuccess ) {
+					continue;
+				}
+				button = (state.Buttons & ovrButton_A) != 0;
+			}
+			else {
+				continue;
+			}
+
+			ovrTracking tracking;
+			if( vrapi_GetInputTrackingState( mobile, caps_header.DeviceID, time, &tracking ) != ovrSuccess ) {
+				continue;
+			}
+			if( (tracking.Status & VRAPI_TRACKING_STATUS_ORIENTATION_TRACKED) == 0 ) {
+				continue;
+			}
+
+			ovrMatrix4f const m = ovrMatrix4f_CreateFromQuaternion( &tracking.HeadPose.Pose.Orientation );
+			float const x = m.M[0][2];
+			float const y = m.M[1][2];
+			float const z = m.M[2][2];
+			float const u = std::atan2( x, z );
+			float const v = y / hypotf( x, z );
+			long const iu = lround( float( -display_unit / M_PI ) * u + 0.5f * float( _screen_w ) );
+			long const iv = lround( float( +display_unit / M_PI ) * v + 0.5f * float( _screen_h ) );
+			if( 0 <= iu && iu < _screen_w && 0 <= iv && iv < _screen_h ) {
+				_vnc_thread.push_mouse_event( iu, iv, button );
+			}
+
+			break;
+		}
+	}
 	OVR::OvrGuiSys::ovrDummySoundEffectPlayer _sound_player;
 	std::unique_ptr<OVR::OvrGuiSys>           _gui;
 	OVR::OvrSceneView                         _scene;
