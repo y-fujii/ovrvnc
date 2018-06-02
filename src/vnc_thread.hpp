@@ -48,8 +48,8 @@ private:
 	static rfbBool _on_resize( rfbClient* rfb ) {
 		auto const self = reinterpret_cast<vnc_thread_t*>( rfbClientGetClientData( rfb, nullptr ) );
 		{
-			std::lock_guard<std::mutex> lock( self->_mutex );
 			auto& region = self->_region;
+			std::lock_guard<std::mutex> lock( self->_mutex );
 			region.buf = std::make_shared<std::vector<uint32_t>>( rfb->width * rfb->height, ~0u );
 			region.w   = rfb->width;
 			region.h   = rfb->height;
@@ -64,14 +64,15 @@ private:
 
 	static void _on_update( rfbClient* rfb, int x0, int y0, int w, int h ) {
 		auto const self = reinterpret_cast<vnc_thread_t*>( rfbClientGetClientData( rfb, nullptr ) );
-		{
-			std::lock_guard<std::mutex> lock( self->_mutex );
-			auto& region = self->_region;
-			for( int y = y0; y < y0 + h; ++y ) {
-				for( int x = x0; x < x0 + w; ++x ) {
-					(*region.buf)[x + y * region.w] |= 0xff000000;
-				}
+		// XXX
+		for( int y = y0; y < y0 + h; ++y ) {
+			for( int x = x0; x < x0 + w; ++x ) {
+				reinterpret_cast<uint32_t*>( rfb->frameBuffer )[rfb->width * y + x] |= 0xff000000;
 			}
+		}
+		{
+			auto& region = self->_region;
+			std::lock_guard<std::mutex> lock( self->_mutex );
 			region.x0 = std::min( region.x0, x0 );
 			region.y0 = std::min( region.y0, y0 );
 			region.x1 = std::min( std::max( region.x1, x0 + w ), region.w );
@@ -80,35 +81,38 @@ private:
 	}
 
 	void _process( std::string host, int const port ) {
-		rfbClient* const rfb = rfbGetClient( 8, 3, 4 );
-		rfb->MallocFrameBuffer    = _on_resize;
-		rfb->GotFrameBufferUpdate = _on_update;
-		rfb->canHandleNewFBSize   = TRUE;
-		rfb->serverHost           = strdup( host.c_str() );
-		rfb->serverPort           = port;
-		rfbClientSetClientData( rfb, nullptr, this );
-
-		while( !rfbInitClient( rfb, nullptr, nullptr ) ) {
-			__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "rfbInitClient" );
-			sleep( 1 );
-		}
-
 		while( true ) {
-			int const i = WaitForMessage( rfb, 100'000 );
-			if( i < 0 ) {
-				__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "WaitForMessage" );
+			rfbClient* const rfb = rfbGetClient( 8, 3, 4 );
+			rfb->MallocFrameBuffer    = _on_resize;
+			rfb->GotFrameBufferUpdate = _on_update;
+			rfb->canHandleNewFBSize   = TRUE;
+			rfb->serverHost           = strdup( host.c_str() );
+			rfb->serverPort           = port;
+			rfbClientSetClientData( rfb, nullptr, this );
+
+			if( !rfbInitClient( rfb, nullptr, nullptr ) ) {
+				// rfbInitClient() calls rfbClientCleanup() on failure.
+				__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "rfbInitClient" );
 				sleep( 1 );
 				continue;
 			}
-			if( i > 0 ) {
-				if( !HandleRFBServerMessage( rfb ) ) {
-					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "HandleRFBServerMessage" );
-					sleep( 1 );
+
+			while( true ) {
+				int const i = WaitForMessage( rfb, 100'000 );
+				if( i < 0 ) {
+					__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "WaitForMessage" );
+					break;
+				}
+				if( i == 0 ) {
 					continue;
 				}
+				if( !HandleRFBServerMessage( rfb ) ) {
+					__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "HandleRFBServerMessage" );
+					break;
+				}
 			}
+			rfbClientCleanup( rfb );
 		}
-		rfbClientCleanup( rfb );
 	}
 
 	region_t    _region;

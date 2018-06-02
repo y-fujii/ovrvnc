@@ -9,7 +9,7 @@ Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
 
 
 *************************************************************************************/
-package net.mimosa_pudica.ovrvnc;
+package net.mimosa_pudica.ovr_vnc;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -17,7 +17,7 @@ import android.content.Intent;
 import com.oculus.vrappframework.VrActivity;
 
 public class MainActivity extends VrActivity {
-	public static final String TAG = "ovrvnc";
+	public static final String TAG = "ovr_vnc";
 
 	/** Load jni .so on initialization */
 	static {

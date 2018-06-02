@@ -15,23 +15,39 @@
 #include "vnc_thread.hpp"
 
 
+namespace std {
+	template<>
+	struct default_delete<ovrTextureSwapChain> {
+		void operator()( ovrTextureSwapChain* self ) const {
+			vrapi_DestroyTextureSwapChain( self );
+		}
+	};
+
+	template<>
+	struct default_delete<OVR::OvrGuiSys> {
+		void operator()( OVR::OvrGuiSys* self ) const {
+			OVR::OvrGuiSys::Destroy( self );
+		}
+	};
+};
+
 struct application_t: OVR::VrAppInterface {
+	inline static std::string const host = "192.168.179.3";
+	inline static int const         port = 5900;
+
 	application_t() {
-		_gui = OVR::OvrGuiSys::Create();
+		_gui = std::unique_ptr<OVR::OvrGuiSys>( OVR::OvrGuiSys::Create() );
 	}
 
-	virtual ~application_t() {
-		if( _screen != nullptr ) {
-			vrapi_DestroyTextureSwapChain( _screen );
-		}
-		OVR::OvrGuiSys::Destroy( _gui );
+	virtual void Configure( OVR::ovrSettings& settings ) override {
+		settings.UseSrgbFramebuffer = true;
 	}
 
 	virtual void EnteredVrMode( OVR::ovrIntentType const intent_type, char const*, char const*, char const* ) override {
 		if( intent_type == OVR::INTENT_LAUNCH ) {
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
 			_init_gui();
-			_vnc_thread.run( "192.168.179.3", 5900 );
+			_vnc_thread.run( host, port );
 		}
 	}
 
@@ -60,34 +76,9 @@ struct application_t: OVR::VrAppInterface {
 		res.DisplayTime  = frame.PredictedDisplayTimeInSeconds;
 		res.SwapInterval = app->GetSwapInterval();
 
-		vnc_thread_t::region_t region = _vnc_thread.get_update_region();
-		if( region.buf != nullptr ) {
-			if( _w != region.w || _h != region.h ) {
-				_w = region.w;
-				_h = region.h;
-				if( _screen != nullptr ) {
-					vrapi_DestroyTextureSwapChain( _screen );
-				}
-				_screen = vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D, VRAPI_TEXTURE_FORMAT_8888, region.w, region.h, 1, false );
-				glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen, 0 ) );
-				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
-				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
-				GLfloat borderColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-				glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
-			}
-			if( region.x0 < region.x1 && region.y0 < region.y1 ) {
-				uint32_t const* const buf = region.buf->data() + region.w * region.y0 + region.x0;
-				int const w = region.x1 - region.x0;
-				int const h = region.y1 - region.y0;
-				glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
-				glPixelStorei( GL_UNPACK_ROW_LENGTH, region.w );
-				glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen, 0 ) );
-				glTexSubImage2D( GL_TEXTURE_2D, 0, region.x0, region.y0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf );
-			}
-			glBindTexture( GL_TEXTURE_2D, 0 );
-		}
+		_sync_screen();
 
-		/* projection layer */ {
+		/* projection layer (currently unused). */ {
 			ovrLayerProjection2& layer = res.Layers[res.LayerCount++].Projection;
 			layer = vrapi_DefaultLayerProjection2();
 			layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
@@ -98,8 +89,9 @@ struct application_t: OVR::VrAppInterface {
 				layer.Textures[eye].TexCoordsFromTanAngles = frame.TexCoordsFromTanAngles;
 			}
 		}
-		/* cylindrical layer */ {
-			ovrMatrix4f const m_m = ovrMatrix4f_CreateScale( 1.0f, 1.0f, 1.0f );
+
+		if( _screen != nullptr ) {
+			ovrMatrix4f const m_m = ovrMatrix4f_CreateScale( 100.0f, 100.0f, 100.0f );
 
 			ovrLayerCylinder2& layer = res.Layers[res.LayerCount++].Cylinder;
 			layer = vrapi_DefaultLayerCylinder2();
@@ -108,13 +100,19 @@ struct application_t: OVR::VrAppInterface {
 			layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
 			layer.HeadPose = frame.Tracking.HeadPose;
 			for( size_t eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; ++eye ) {
-				ovrMatrix4f const m_mv = ovrMatrix4f_Multiply( &frame.Tracking.Eye[eye].ViewMatrix, &m_m );
-				layer.Textures[eye].ColorSwapChain         = _screen;
+				layer.Textures[eye].ColorSwapChain         = _screen.get();
 				layer.Textures[eye].SwapChainIndex         = 0;
+
+				ovrMatrix4f const m_mv = ovrMatrix4f_Multiply( &frame.Tracking.Eye[eye].ViewMatrix, &m_m );
 				layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_Inverse( &m_mv );
+
 				// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
-				layer.Textures[eye].TextureMatrix.M[0][0]  = 2560.0f / _w;
-				layer.Textures[eye].TextureMatrix.M[1][1]  = float( 2560.0 * 2.0 / (std::sqrt( 3.0 ) * M_PI) ) / _h;
+				float const sx = 2560.0f / float( _screen_w );
+				float const sy = float( 2560.0 * 2.0 / (std::sqrt( 3.0 ) * M_PI) ) / float( _screen_h );
+				layer.Textures[eye].TextureMatrix.M[0][0] = sx;
+				layer.Textures[eye].TextureMatrix.M[1][1] = sy;
+				layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * sx + 0.5f;
+				layer.Textures[eye].TextureMatrix.M[1][2] = -0.5f * sy + 0.5f;
 			}
 		}
 
@@ -123,7 +121,7 @@ struct application_t: OVR::VrAppInterface {
 
 private:
 	void _init_gui() {
-		ovrJava const* java = app->GetJava();
+		ovrJava const* const java = app->GetJava();
 		OVR::ovrLocale* locale = OVR::ovrLocale::Create( *java->Env, java->ActivityObject, "default" );
 		OVR::String font_name;
 		locale->GetString( "@string/font_name", "efigs.fnt", font_name );
@@ -132,17 +130,49 @@ private:
 		_gui->Init( app, _sound_player, font_name.ToCStr(), &app->GetDebugLines() );
 	}
 
+	void _sync_screen() {
+		vnc_thread_t::region_t const region = _vnc_thread.get_update_region();
+		if( region.buf == nullptr ) {
+			return;
+		}
+		if( _screen_w != region.w || _screen_h != region.h ) {
+			_screen_w = region.w;
+			_screen_h = region.h;
+			_screen = std::unique_ptr<ovrTextureSwapChain>(
+				vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D, VRAPI_TEXTURE_FORMAT_8888_sRGB, region.w, region.h, 1, false )
+			);
+			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen.get(), 0 ) );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
+			GLfloat borderColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4.0f );
+		}
+		if( region.x0 < region.x1 && region.y0 < region.y1 ) {
+			uint32_t const* const buf = region.buf->data() + region.w * region.y0 + region.x0;
+			int const w = region.x1 - region.x0;
+			int const h = region.y1 - region.y0;
+			glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+			glPixelStorei( GL_UNPACK_ROW_LENGTH, region.w );
+			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen.get(), 0 ) );
+			glTexSubImage2D( GL_TEXTURE_2D, 0, region.x0, region.y0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf );
+		}
+		glBindTexture( GL_TEXTURE_2D, 0 );
+	}
+
 	OVR::OvrGuiSys::ovrDummySoundEffectPlayer _sound_player;
-	OVR::OvrGuiSys*                           _gui    = nullptr;
+	std::unique_ptr<OVR::OvrGuiSys>           _gui;
 	OVR::OvrSceneView                         _scene;
-	ovrTextureSwapChain*                      _screen = nullptr;
-	int                                       _w      = 0;
-	int                                       _h      = 0;
+	std::unique_ptr<ovrTextureSwapChain>      _screen;
+	int                                       _screen_w = 0;
+	int                                       _screen_h = 0;
 	vnc_thread_t                              _vnc_thread;
 };
 
 #if defined( OVR_OS_ANDROID )
-extern "C" jlong Java_net_mimosa_1pudica_ovrvnc_MainActivity_nativeSetAppInterface(
+extern "C" jlong Java_net_mimosa_1pudica_ovr_1vnc_MainActivity_nativeSetAppInterface(
 	JNIEnv* jni, jclass clazz, jobject activity, jstring package, jstring command, jstring uri
 ) {
 	return (new application_t())->SetActivity( jni, clazz, activity, package, command, uri );

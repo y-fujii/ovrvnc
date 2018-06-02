@@ -9,10 +9,10 @@ dependencies {
 }
 
 android {
-  project.archivesBaseName = "ovrvnc"
+  project.archivesBaseName = "ovr_vnc"
 
   defaultConfig {
-    applicationId "net.mimosa_pudica.ovrvnc"
+    applicationId "net.mimosa_pudica.ovr_vnc"
 
     // override app plugin abiFilters to test experimental 64-bit support
     externalNativeBuild {
