@@ -35,8 +35,9 @@ namespace std {
 
 struct application_t: OVR::VrAppInterface {
 	inline static std::string const host         = "192.168.179.3";
-	inline static int const         port         = 5902;
+	inline static int const         port         = 5900;
 	inline static float const       display_unit = 2560.0f;
+	inline static bool              use_pointer  = false;
 
 	application_t() {
 		_gui = std::unique_ptr<OVR::OvrGuiSys>( OVR::OvrGuiSys::Create() );
@@ -46,8 +47,8 @@ struct application_t: OVR::VrAppInterface {
 		settings.UseSrgbFramebuffer = true;
 		settings.RenderMode         = OVR::RENDERMODE_MULTIVIEW;
 		settings.TrackingTransform  = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
-		settings.CpuLevel           = 1;
-		settings.GpuLevel           = 1;
+		settings.CpuLevel           = 0;
+		settings.GpuLevel           = 0;
 	}
 
 	virtual void EnteredVrMode( OVR::ovrIntentType const intent_type, char const*, char const*, char const* ) override {
@@ -65,10 +66,12 @@ struct application_t: OVR::VrAppInterface {
 			if( _gui->OnKeyEvent( ev.KeyCode, ev.RepeatCount, ev.EventType ) ) {
 				continue;
 			}
+			/*
 			if( ev.KeyCode == OVR::OVR_KEY_BACK && ev.EventType == OVR::KEY_EVENT_SHORT_PRESS ) {
 				app->ShowSystemUI( VRAPI_SYS_UI_CONFIRM_QUIT_MENU );
 				continue;
 			}
+			*/
 		}
 
 		_scene.Frame( frame );
@@ -84,7 +87,9 @@ struct application_t: OVR::VrAppInterface {
 		res.DisplayTime  = frame.PredictedDisplayTimeInSeconds;
 		res.SwapInterval = app->GetSwapInterval();
 
-		_handle_inputs( frame.PredictedDisplayTimeInSeconds );
+		if( use_pointer ) {
+			_handle_pointer( frame.PredictedDisplayTimeInSeconds );
+		}
 		_sync_screen();
 
 		/* projection layer (currently unused). */ {
@@ -172,7 +177,7 @@ private:
 	}
 
 
-	void _handle_inputs( double const time ) {
+	void _handle_pointer( double const time ) {
 		ovrMobile* const mobile = app->GetOvrMobile();
 		for( uint32_t i = 0; true; ++i ) {
 			ovrInputCapabilityHeader caps_header;
@@ -242,6 +247,7 @@ private:
 			break;
 		}
 	}
+
 	OVR::OvrGuiSys::ovrDummySoundEffectPlayer _sound_player;
 	std::unique_ptr<OVR::OvrGuiSys>           _gui;
 	OVR::OvrSceneView                         _scene;
