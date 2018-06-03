@@ -35,9 +35,9 @@ namespace std {
 
 struct application_t: OVR::VrAppInterface {
 	inline static std::string const host         = "192.168.179.3";
-	inline static int const         port         = 5900;
-	inline static float const       display_unit = 2560.0f;
-	inline static bool              use_pointer  = false;
+	inline static int         const port         = 5900;
+	inline static float       const display_unit = 2560.0f;
+	inline static bool        const use_pointer  = true;
 
 	application_t() {
 		_gui = std::unique_ptr<OVR::OvrGuiSys>( OVR::OvrGuiSys::Create() );
@@ -66,12 +66,6 @@ struct application_t: OVR::VrAppInterface {
 			if( _gui->OnKeyEvent( ev.KeyCode, ev.RepeatCount, ev.EventType ) ) {
 				continue;
 			}
-			/*
-			if( ev.KeyCode == OVR::OVR_KEY_BACK && ev.EventType == OVR::KEY_EVENT_SHORT_PRESS ) {
-				app->ShowSystemUI( VRAPI_SYS_UI_CONFIRM_QUIT_MENU );
-				continue;
-			}
-			*/
 		}
 
 		_scene.Frame( frame );
@@ -176,7 +170,6 @@ private:
 		glBindTexture( GL_TEXTURE_2D, 0 );
 	}
 
-
 	void _handle_pointer( double const time ) {
 		ovrMobile* const mobile = app->GetOvrMobile();
 		for( uint32_t i = 0; true; ++i ) {
@@ -185,8 +178,9 @@ private:
 				break;
 			}
 
-			bool button = false;
-			if ( (caps_header.Type & ovrControllerType_TrackedRemote) != 0 ) {
+			bool button_0 = false;
+			bool button_1 = false;
+			if( (caps_header.Type & ovrControllerType_TrackedRemote) != 0 ) {
 				ovrInputTrackedRemoteCapabilities caps;
 				caps.Header = caps_header;
 				if( vrapi_GetInputDeviceCapabilities( mobile, &caps.Header ) != ovrSuccess ) {
@@ -201,9 +195,10 @@ private:
 				if( vrapi_GetCurrentInputState( mobile, caps_header.DeviceID, &state.Header ) != ovrSuccess ) {
 					continue;
 				}
-				button = (state.Buttons & ovrButton_A) != 0;
+				button_0 = (state.Buttons & ovrButton_A) != 0;
+				button_1 = (state.Buttons & ovrButton_Enter) != 0;
 			}
-			else if ( (caps_header.Type & ovrControllerType_Headset) != 0 ) {
+			else if( (caps_header.Type & ovrControllerType_Headset) != 0 ) {
 				ovrInputHeadsetCapabilities caps;
 				caps.Header = caps_header;
 				if( vrapi_GetInputDeviceCapabilities( mobile, &caps.Header ) != ovrSuccess ) {
@@ -218,7 +213,8 @@ private:
 				if( vrapi_GetCurrentInputState( mobile, caps_header.DeviceID, &state.Header ) != ovrSuccess ) {
 					continue;
 				}
-				button = (state.Buttons & ovrButton_A) != 0;
+				button_0 = (state.Buttons & ovrButton_A) != 0;
+				button_1 = (state.Buttons & ovrButton_Enter) != 0;
 			}
 			else {
 				continue;
@@ -238,10 +234,10 @@ private:
 			float const z = m.M[2][2];
 			float const u = std::atan2( x, z );
 			float const v = y / hypotf( x, z );
-			long const iu = lround( float( -display_unit / M_PI ) * u + 0.5f * float( _screen_w ) );
-			long const iv = lround( float( +display_unit / M_PI ) * v + 0.5f * float( _screen_h ) );
+			long const iu = lroundf( float( -display_unit / M_PI ) * u + 0.5f * float( _screen_w ) );
+			long const iv = lroundf( float( +display_unit / M_PI ) * v + 0.5f * float( _screen_h ) );
 			if( 0 <= iu && iu < _screen_w && 0 <= iv && iv < _screen_h ) {
-				_vnc_thread.push_mouse_event( iu, iv, button );
+				_vnc_thread.push_mouse_event( iu, iv, button_0, button_1 );
 			}
 
 			break;

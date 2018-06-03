@@ -45,16 +45,17 @@ struct vnc_thread_t {
 		return tmp;
 	}
 
-	void push_mouse_event( int x, int y, bool btn ) {
+	void push_mouse_event( int x, int y, bool b0, bool b1 ) {
+		int button = (b0 ? rfbButton1Mask : 0) | (b1 ? rfbButton3Mask : 0);
 		std::lock_guard<std::mutex> lock( _pointer_mutex );
-		_pointer_events.push( { x, y, btn } );
+		_pointer_events.push( { x, y, button } );
 	}
 
 private:
 	struct _pointer_event_t {
-		int  x;
-		int  y;
-		bool button;
+		int x;
+		int y;
+		int button;
 	};
 
 	static rfbBool _on_resize( rfbClient* rfb ) {
@@ -115,7 +116,7 @@ private:
 					while( !_pointer_events.empty() ) {
 						// XXX: reduce pointer move events.
 						_pointer_event_t const& ev = _pointer_events.front();
-						if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ? rfbButton1Mask : 0 ) ) {
+						if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
 							__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "SendPointerEvent" );
 							goto error;
 						}
