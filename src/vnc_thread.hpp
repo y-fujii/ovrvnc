@@ -111,16 +111,21 @@ private:
 			}
 
 			while( true ) {
-				{
-					std::lock_guard<std::mutex> lock( _pointer_mutex );
-					while( !_pointer_events.empty() ) {
-						// XXX: reduce pointer move events.
-						_pointer_event_t const& ev = _pointer_events.front();
-						if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
-							__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "SendPointerEvent" );
-							goto error;
+				while( true ) {
+					_pointer_event_t ev;
+					{
+						std::lock_guard<std::mutex> lock( _pointer_mutex );
+						if( _pointer_events.empty() ) {
+							break;
 						}
+						ev = std::move( _pointer_events.front() );
 						_pointer_events.pop();
+					}
+
+					// XXX: reduce pointer move events.
+					if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
+						__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "SendPointerEvent" );
+						goto error;
 					}
 				}
 
