@@ -93,6 +93,47 @@ private:
 		}
 	}
 
+	// XXX: separating sender/receiver threads is possible with libvncserver?
+	bool _process_event( rfbClient* const rfb ) {
+		fd_set  read_fds;
+		fd_set write_fds;
+		FD_ZERO( & read_fds );
+		FD_ZERO( &write_fds );
+		FD_SET( rfb->sock, & read_fds );
+		FD_SET( rfb->sock, &write_fds );
+		if( select( rfb->sock + 1, &read_fds, &write_fds, nullptr, nullptr ) < 0 ) {
+			__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "select" );
+			return false;
+		}
+
+		if( FD_ISSET( rfb->sock, &read_fds ) ) {
+			std::queue<_pointer_event_t> events;
+			{
+				std::lock_guard<std::mutex> lock( _pointer_mutex );
+				std::swap( events, _pointer_events );
+			}
+
+			while( !events.empty() ) {
+				_pointer_event_t const& ev = events.front();
+				// XXX: reduce pointer move events.
+				if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
+					__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "SendPointerEvent" );
+					return false;
+				}
+				events.pop();
+			}
+		}
+
+		if( FD_ISSET( rfb->sock, &write_fds ) ) {
+			if( !HandleRFBServerMessage( rfb ) ) {
+				__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "HandleRFBServerMessage" );
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	void _process( std::string host, int const port ) {
 		while( true ) {
 			rfbClient* const rfb = rfbGetClient( 8, 3, 4 );
@@ -110,39 +151,8 @@ private:
 				continue;
 			}
 
-			while( true ) {
-				while( true ) {
-					_pointer_event_t ev;
-					{
-						std::lock_guard<std::mutex> lock( _pointer_mutex );
-						if( _pointer_events.empty() ) {
-							break;
-						}
-						ev = std::move( _pointer_events.front() );
-						_pointer_events.pop();
-					}
+			while( _process_event( rfb ) );
 
-					// XXX: reduce pointer move events.
-					if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
-						__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "SendPointerEvent" );
-						goto error;
-					}
-				}
-
-				int const i = WaitForMessage( rfb, 500 );
-				if( i < 0 ) {
-					__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "WaitForMessage" );
-					break;
-				}
-				if( i == 0 ) {
-					continue;
-				}
-				if( !HandleRFBServerMessage( rfb ) ) {
-					__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "HandleRFBServerMessage" );
-					break;
-				}
-			}
-error:
 			rfbClientCleanup( rfb );
 		}
 	}
