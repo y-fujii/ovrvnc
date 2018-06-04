@@ -110,23 +110,21 @@ private:
 				continue;
 			}
 
+			// is it possible to split receiver/sender threads with libvncserver?
+			std::queue<_pointer_event_t> events;
 			while( true ) {
-				while( true ) {
-					_pointer_event_t ev;
-					{
-						std::lock_guard<std::mutex> lock( _pointer_mutex );
-						if( _pointer_events.empty() ) {
-							break;
-						}
-						ev = std::move( _pointer_events.front() );
-						_pointer_events.pop();
-					}
-
+				{
+					std::lock_guard<std::mutex> lock( _pointer_mutex );
+					std::swap( events, _pointer_events );
+				}
+				while( !events.empty() ) {
+					_pointer_event_t const& ev = events.front();
 					// XXX: reduce pointer move events.
 					if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
 						__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "SendPointerEvent" );
 						goto error;
 					}
+					events.pop();
 				}
 
 				int const i = WaitForMessage( rfb, 500 );
