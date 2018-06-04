@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <queue>
+#include <string>
 #include <thread>
 #include <mutex>
 #include <rfb/rfbclient.h>

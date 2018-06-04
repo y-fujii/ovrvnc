@@ -15,6 +15,7 @@
 #include "OVR_Locale.h"
 #pragma GCC diagnostic pop
 #include "vnc_thread.hpp"
+#include "config.hpp"
 
 
 namespace std {
@@ -34,20 +35,16 @@ namespace std {
 };
 
 struct application_t: OVR::VrAppInterface {
-	inline static std::string const host         = "192.168.179.3";
-	inline static int         const port         = 5900;
-	inline static float       const display_unit = 2560.0f;
-	inline static bool        const use_pointer  = true;
-
-	application_t( std::string ) {
+	application_t( std::string const& extPath ) {
 		_gui = std::unique_ptr<OVR::OvrGuiSys>( OVR::OvrGuiSys::Create() );
+		_config = config_load( extPath + "/ovr_vnc.toml" );
 	}
 
 	virtual void Configure( OVR::ovrSettings& settings ) override {
 		settings.UseSrgbFramebuffer = true;
 		settings.RenderMode         = OVR::RENDERMODE_MULTIVIEW;
 		settings.TrackingTransform  = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
-		settings.CpuLevel           = 1;
+		settings.CpuLevel           = 2;
 		settings.GpuLevel           = 0;
 	}
 
@@ -56,7 +53,7 @@ struct application_t: OVR::VrAppInterface {
 			vrapi_SetPropertyInt( app->GetJava(), VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER, 1 );
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
 			_init_gui();
-			_vnc_thread.run( host, port );
+			_vnc_thread.run( _config.host, _config.port );
 		}
 	}
 
@@ -81,9 +78,7 @@ struct application_t: OVR::VrAppInterface {
 		res.DisplayTime  = frame.PredictedDisplayTimeInSeconds;
 		res.SwapInterval = app->GetSwapInterval();
 
-		if( use_pointer ) {
-			_handle_pointer( frame.PredictedDisplayTimeInSeconds );
-		}
+		_handle_pointer( frame.PredictedDisplayTimeInSeconds );
 		_sync_screen();
 
 		/* projection layer (currently unused). */ {
@@ -115,8 +110,8 @@ struct application_t: OVR::VrAppInterface {
 				layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_Inverse( &m_mv );
 
 				// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
-				float const sx = display_unit / float( _screen_w );
-				float const sy = float( 2.0 * display_unit / (std::sqrt( 3.0 ) * M_PI) ) / float( _screen_h );
+				float const sx = _config.resolution / float( _screen_w );
+				float const sy = float( 2.0 * _config.resolution / (std::sqrt( 3.0 ) * M_PI) ) / float( _screen_h );
 				layer.Textures[eye].TextureMatrix.M[0][0] = sx;
 				layer.Textures[eye].TextureMatrix.M[1][1] = sy;
 				layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * sx + 0.5f;
@@ -234,8 +229,8 @@ private:
 			float const z = m.M[2][2];
 			float const u = std::atan2( x, z );
 			float const v = y / hypotf( x, z );
-			long const iu = lroundf( float( -display_unit / M_PI ) * u + 0.5f * float( _screen_w ) );
-			long const iv = lroundf( float( +display_unit / M_PI ) * v + 0.5f * float( _screen_h ) );
+			long const iu = lroundf( float( -_config.resolution / M_PI ) * u + 0.5f * float( _screen_w ) );
+			long const iv = lroundf( float( +_config.resolution / M_PI ) * v + 0.5f * float( _screen_h ) );
 			if( 0 <= iu && iu < _screen_w && 0 <= iv && iv < _screen_h ) {
 				_vnc_thread.push_mouse_event( iu, iv, button_0, button_1 );
 			}
@@ -244,6 +239,7 @@ private:
 		}
 	}
 
+	config_t                                  _config;
 	OVR::OvrGuiSys::ovrDummySoundEffectPlayer _sound_player;
 	std::unique_ptr<OVR::OvrGuiSys>           _gui;
 	OVR::OvrSceneView                         _scene;

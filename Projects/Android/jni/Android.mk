@@ -18,13 +18,13 @@ LOCAL_SRC_FILES			:= \
 
 LOCAL_STATIC_LIBRARIES	:= vrsound vrmodel vrlocale vrgui vrappframework libovrkernel
 LOCAL_SHARED_LIBRARIES	:= vrapi liblog
-LOCAL_CPPFLAGS			+= -std=gnu++14 -pedantic -Wall -Wextra
+LOCAL_CPPFLAGS			+= -std=gnu++14 -pedantic -Wall -Wextra -fexceptions -frtti
 LOCAL_CFLAGS			+= \
 	-Wno-error \
-	-I$(LOCAL_PATH)/../../../cpptoml/include \
-	-I$(LOCAL_PATH)/../../../libvncserver \
-	-I$(LOCAL_PATH)/../../../libvncserver/common \
-	-I$(LOCAL_PATH)/../../../include
+	-isystem $(LOCAL_PATH)/../../../cpptoml/include \
+	-isystem $(LOCAL_PATH)/../../../libvncserver \
+	-isystem $(LOCAL_PATH)/../../../libvncserver/common \
+	-isystem $(LOCAL_PATH)/../../../include
 
 include $(BUILD_SHARED_LIBRARY)
 
