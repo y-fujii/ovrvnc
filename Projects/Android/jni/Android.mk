@@ -21,6 +21,7 @@ LOCAL_SHARED_LIBRARIES	:= vrapi liblog
 LOCAL_CPPFLAGS			+= -std=gnu++14 -pedantic -Wall -Wextra
 LOCAL_CFLAGS			+= \
 	-Wno-error \
+	-I$(LOCAL_PATH)/../../../cpptoml/include \
 	-I$(LOCAL_PATH)/../../../libvncserver \
 	-I$(LOCAL_PATH)/../../../libvncserver/common \
 	-I$(LOCAL_PATH)/../../../include

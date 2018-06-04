@@ -39,7 +39,7 @@ struct application_t: OVR::VrAppInterface {
 	inline static float       const display_unit = 2560.0f;
 	inline static bool        const use_pointer  = true;
 
-	application_t() {
+	application_t( std::string ) {
 		_gui = std::unique_ptr<OVR::OvrGuiSys>( OVR::OvrGuiSys::Create() );
 	}
 
@@ -47,7 +47,7 @@ struct application_t: OVR::VrAppInterface {
 		settings.UseSrgbFramebuffer = true;
 		settings.RenderMode         = OVR::RENDERMODE_MULTIVIEW;
 		settings.TrackingTransform  = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
-		settings.CpuLevel           = 2;
+		settings.CpuLevel           = 1;
 		settings.GpuLevel           = 0;
 	}
 
@@ -255,8 +255,11 @@ private:
 
 #if defined( OVR_OS_ANDROID )
 extern "C" jlong Java_net_mimosa_1pudica_ovr_1vnc_MainActivity_nativeSetAppInterface(
-	JNIEnv* jni, jclass clazz, jobject activity, jstring package, jstring command, jstring uri
+	JNIEnv* jni, jclass clazz, jobject activity, jstring package, jstring command, jstring uri, jstring ext_path
 ) {
-	return (new application_t())->SetActivity( jni, clazz, activity, package, command, uri );
+	char const* const ext_path_c = jni->GetStringUTFChars( ext_path, nullptr );
+	application_t* const app = new application_t( ext_path_c );
+	jni->ReleaseStringUTFChars( ext_path, ext_path_c );
+	return app->SetActivity( jni, clazz, activity, package, command, uri );
 }
 #endif

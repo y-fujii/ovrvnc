@@ -1,3 +1,6 @@
 [submodule "libvncserver"]
 	path = libvncserver
 	url = https://github.com/LibVNC/libvncserver/
+[submodule "cpptoml"]
+	path = cpptoml
+	url = https://github.com/skystrife/cpptoml

@@ -1,41 +1,29 @@
-/************************************************************************************
-
-Filename    :   MainActivity.java
-Content     :   
-Created     :   
-Authors     :   
-
-Copyright   :   Copyright 2014 Oculus VR, LLC. All Rights reserved.
-
-
-*************************************************************************************/
+// derived from Oculus Mobile SDK template, (c) 2014 Oculus VR, LLC. All Rights reserved.
 package net.mimosa_pudica.ovr_vnc;
 
 import android.os.Bundle;
-import android.util.Log;
+import android.os.Environment;
 import android.content.Intent;
 import com.oculus.vrappframework.VrActivity;
 
-public class MainActivity extends VrActivity {
-	public static final String TAG = "ovr_vnc";
 
-	/** Load jni .so on initialization */
+public class MainActivity extends VrActivity {
 	static {
-		Log.d(TAG, "LoadLibrary");
-		System.loadLibrary("ovrapp");
+		System.loadLibrary( "ovrapp" );
 	}
 
-    public static native long nativeSetAppInterface( VrActivity act, String fromPackageNameString, String commandString, String uriString );
+	public static native long nativeSetAppInterface( VrActivity activity, String packageName, String command, String uri, String extPath );
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+	@Override
+	protected void onCreate( Bundle savedInstanceState ) {
+		super.onCreate( savedInstanceState );
 
 		Intent intent = getIntent();
-		String commandString = VrActivity.getCommandStringFromIntent( intent );
-		String fromPackageNameString = VrActivity.getPackageStringFromIntent( intent );
-		String uriString = VrActivity.getUriStringFromIntent( intent );
+		String packageName = VrActivity.getPackageStringFromIntent( intent );
+		String command     = VrActivity.getCommandStringFromIntent( intent );
+		String uri         = VrActivity.getUriStringFromIntent( intent );
+		String extPath     = Environment.getExternalStorageDirectory().getAbsolutePath();
 
-		setAppPtr( nativeSetAppInterface( this, fromPackageNameString, commandString, uriString ) );
-    }   
+		setAppPtr( nativeSetAppInterface( this, packageName, command, uri, extPath ) );
+	}
 }
