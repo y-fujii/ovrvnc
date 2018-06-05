@@ -1,5 +1,5 @@
-/Projects/Android/.externalNativeBuild/
-/Projects/Android/.gradle/
-/Projects/Android/android.debug.keystore
-/Projects/Android/build/
+/android/.externalNativeBuild/
+/android/.gradle/
+/android/android.debug.keystore
+/android/build/
 /tags
