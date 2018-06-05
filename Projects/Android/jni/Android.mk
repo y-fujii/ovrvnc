@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-include ../../../../../cflags.mk
+include $(OCULUS_SDK_PATH)/cflags.mk
 
 LIBVNCCLIENT_DIR        := $(LOCAL_PATH)/../../../libvncserver
 LOCAL_MODULE			:= ovrapp
@@ -32,7 +32,4 @@ include $(BUILD_SHARED_LIBRARY)
 $(call import-module,LibOVRKernel/Projects/Android/jni)
 $(call import-module,VrApi/Projects/AndroidPrebuilt/jni)
 $(call import-module,VrAppFramework/Projects/Android/jni)
-$(call import-module,VrAppSupport/VrGUI/Projects/Android/jni)
-$(call import-module,VrAppSupport/VrLocale/Projects/Android/jni)
 $(call import-module,VrAppSupport/VrModel/Projects/Android/jni)
-$(call import-module,VrAppSupport/VrSound/Projects/Android/jni)

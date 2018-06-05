@@ -106,7 +106,7 @@ private:
 
 			if( !rfbInitClient( rfb, nullptr, nullptr ) ) {
 				// rfbInitClient() calls rfbClientCleanup() on failure.
-				__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "rfbInitClient" );
+				__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "rfbInitClient" );
 				sleep( 1 );
 				continue;
 			}
@@ -122,7 +122,7 @@ private:
 					_pointer_event_t const& ev = events.front();
 					// XXX: reduce pointer move events.
 					if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
-						__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "SendPointerEvent" );
+						__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "SendPointerEvent" );
 						goto error;
 					}
 					events.pop();
@@ -130,14 +130,14 @@ private:
 
 				int const i = WaitForMessage( rfb, 500 );
 				if( i < 0 ) {
-					__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "WaitForMessage" );
+					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "WaitForMessage" );
 					break;
 				}
 				if( i == 0 ) {
 					continue;
 				}
 				if( !HandleRFBServerMessage( rfb ) ) {
-					__android_log_print( ANDROID_LOG_ERROR, "ovr_vnc", "HandleRFBServerMessage" );
+					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "HandleRFBServerMessage" );
 					break;
 				}
 			}

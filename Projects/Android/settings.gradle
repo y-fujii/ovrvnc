@@ -1,6 +1,7 @@
-rootProject.projectDir = new File(settingsDir, '../../../../..')
-rootProject.name = "ovr_vnc"
+rootProject.projectDir = new File("$System.env.OCULUS_SDK_PATH")
+rootProject.name = "ovrvnc"
 
-include ':', \
-	'VrAppFramework:Projects:Android', \
-	'VrSamples:Native:ovr_vnc:Projects:Android'
+include ':ovrvnc'
+project(':ovrvnc').projectDir = new File('.')
+
+include 'VrAppFramework:Projects:Android'

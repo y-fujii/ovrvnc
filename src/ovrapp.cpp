@@ -27,7 +27,7 @@ namespace std {
 
 struct application_t: OVR::VrAppInterface {
 	application_t( std::string const& ext_path ) {
-		_config = config_load( ext_path + "/ovr_vnc.toml" );
+		_config = config_load( ext_path + "/ovrvnc.toml" );
 	}
 
 	virtual void Configure( OVR::ovrSettings& settings ) override {
@@ -217,7 +217,7 @@ private:
 };
 
 #if defined( OVR_OS_ANDROID )
-extern "C" jlong Java_net_mimosa_1pudica_ovr_1vnc_MainActivity_nativeSetAppInterface(
+extern "C" jlong Java_net_mimosa_1pudica_ovrvnc_MainActivity_nativeSetAppInterface(
 	JNIEnv* jni, jclass clazz, jobject activity, jstring package, jstring command, jstring uri, jstring ext_path
 ) {
 	char const* const ext_path_c = jni->GetStringUTFChars( ext_path, nullptr );

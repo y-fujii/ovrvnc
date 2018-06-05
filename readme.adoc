@@ -1,3 +1,3 @@
-= ovr_vnc - VNC Viewer for Oculus Go
+= ovrvnc - VNC Viewer for Oculus Go
 
 WIP.

@@ -1,5 +1,5 @@
 // derived from Oculus Mobile SDK template, (c) 2014 Oculus VR, LLC. All Rights reserved.
-package net.mimosa_pudica.ovr_vnc;
+package net.mimosa_pudica.ovrvnc;
 
 import android.os.Bundle;
 import android.os.Environment;
