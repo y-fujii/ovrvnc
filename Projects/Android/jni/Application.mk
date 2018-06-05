@@ -4,6 +4,5 @@
 ROOT_DIR := $(dir $(lastword $(MAKEFILE_LIST)))../../../../../..
 include $(ROOT_DIR)/Application.mk
 
-APP_CFLAGS   += -frtti -Wno-error -Wno-tautological-unsigned-enum-zero-compare
-APP_CPPFLAGS += -frtti -Wno-error -Wno-tautological-unsigned-enum-zero-compare
+APP_CPPFLAGS += -frtti
 APP_STL      := c++_static

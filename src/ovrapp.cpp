@@ -11,8 +11,6 @@
 #include "VrApi_Input.h"
 #include "App.h"
 #include "SceneView.h"
-#include "GuiSys.h"
-#include "OVR_Locale.h"
 #pragma GCC diagnostic pop
 #include "vnc_thread.hpp"
 #include "config.hpp"
@@ -25,19 +23,11 @@ namespace std {
 			vrapi_DestroyTextureSwapChain( self );
 		}
 	};
-
-	template<>
-	struct default_delete<OVR::OvrGuiSys> {
-		void operator()( OVR::OvrGuiSys* self ) const {
-			OVR::OvrGuiSys::Destroy( self );
-		}
-	};
 };
 
 struct application_t: OVR::VrAppInterface {
-	application_t( std::string const& extPath ) {
-		_gui = std::unique_ptr<OVR::OvrGuiSys>( OVR::OvrGuiSys::Create() );
-		_config = config_load( extPath + "/ovr_vnc.toml" );
+	application_t( std::string const& ext_path ) {
+		_config = config_load( ext_path + "/ovr_vnc.toml" );
 	}
 
 	virtual void Configure( OVR::ovrSettings& settings ) override {
@@ -52,27 +42,16 @@ struct application_t: OVR::VrAppInterface {
 		if( intent_type == OVR::INTENT_LAUNCH ) {
 			vrapi_SetPropertyInt( app->GetJava(), VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER, 1 );
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
-			_init_gui();
 			_vnc_thread.run( _config.host, _config.port );
 		}
 	}
 
 	virtual OVR::ovrFrameResult Frame( OVR::ovrFrameInput const& frame ) override {
-		for( int i = 0; i < frame.Input.NumKeyEvents; ++i ) {
-			auto const& ev = frame.Input.KeyEvents[i];
-			if( _gui->OnKeyEvent( ev.KeyCode, ev.RepeatCount, ev.EventType ) ) {
-				continue;
-			}
-		}
-
 		_scene.Frame( frame );
 
 		OVR::ovrFrameResult res;
 		_scene.GetFrameMatrices( frame.FovX, frame.FovY, res.FrameMatrices );
 		_scene.GenerateFrameSurfaceList( res.FrameMatrices, res.Surfaces );
-
-		_gui->Frame( frame, res.FrameMatrices.CenterView );
-		_gui->AppendSurfaceList( res.FrameMatrices.CenterView, &res.Surfaces );
 
 		res.FrameIndex   = frame.FrameNumber;
 		res.DisplayTime  = frame.PredictedDisplayTimeInSeconds;
@@ -123,16 +102,6 @@ struct application_t: OVR::VrAppInterface {
 	}
 
 private:
-	void _init_gui() {
-		ovrJava const* const java = app->GetJava();
-		OVR::ovrLocale* locale = OVR::ovrLocale::Create( *java->Env, java->ActivityObject, "default" );
-		OVR::String font_name;
-		locale->GetString( "@string/font_name", "efigs.fnt", font_name );
-		OVR::ovrLocale::Destroy( locale );
-
-		_gui->Init( app, _sound_player, font_name.ToCStr(), &app->GetDebugLines() );
-	}
-
 	void _sync_screen() {
 		vnc_thread_t::region_t const region = _vnc_thread.get_update_region();
 		if( region.buf == nullptr ) {
@@ -228,9 +197,9 @@ private:
 			float const y = m.M[1][2];
 			float const z = m.M[2][2];
 			float const u = std::atan2( x, z );
-			float const v = y / hypotf( x, z );
-			long const iu = lroundf( float( -_config.resolution / M_PI ) * u + 0.5f * float( _screen_w ) );
-			long const iv = lroundf( float( +_config.resolution / M_PI ) * v + 0.5f * float( _screen_h ) );
+			float const v = y / std::hypot( x, z );
+			int const iu = int( std::floor( float( -_config.resolution / M_PI ) * u + 0.5f * float( _screen_w ) ) );
+			int const iv = int( std::floor( float( +_config.resolution / M_PI ) * v + 0.5f * float( _screen_h ) ) );
 			if( 0 <= iu && iu < _screen_w && 0 <= iv && iv < _screen_h ) {
 				_vnc_thread.push_mouse_event( iu, iv, button_0, button_1 );
 			}
@@ -240,8 +209,6 @@ private:
 	}
 
 	config_t                                  _config;
-	OVR::OvrGuiSys::ovrDummySoundEffectPlayer _sound_player;
-	std::unique_ptr<OVR::OvrGuiSys>           _gui;
 	OVR::OvrSceneView                         _scene;
 	std::unique_ptr<ovrTextureSwapChain>      _screen;
 	int                                       _screen_w = 0;

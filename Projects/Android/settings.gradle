@@ -3,7 +3,4 @@ rootProject.name = "ovr_vnc"
 
 include ':', \
 	'VrAppFramework:Projects:Android', \
-	'VrAppSupport:VrLocale:Projects:Android', \
-	'VrAppSupport:VrSound:Projects:Android', \
-	'VrAppSupport:VrGUI:Projects:Android', \
 	'VrSamples:Native:ovr_vnc:Projects:Android'

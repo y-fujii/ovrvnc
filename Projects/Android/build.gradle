@@ -3,9 +3,6 @@ apply from: "${rootProject.projectDir}/VrApp.gradle"
 
 dependencies {
   implementation project(':VrAppFramework:Projects:Android')
-  implementation project(':VrAppSupport:VrGUI:Projects:Android')
-  implementation project(':VrAppSupport:VrLocale:Projects:Android')
-  implementation project(':VrAppSupport:VrSound:Projects:Android')
 }
 
 android {
