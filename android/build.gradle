@@ -2,38 +2,38 @@ apply plugin: 'com.android.application'
 apply from: "${rootProject.projectDir}/VrApp.gradle"
 
 dependencies {
-  implementation project(':VrAppFramework:Projects:Android')
+	implementation project(':VrAppFramework:Projects:Android')
 }
 
 android {
-  project.archivesBaseName = "ovrvnc"
+	project.archivesBaseName = "ovrvnc"
 
-  defaultConfig {
-    applicationId "net.mimosa_pudica.ovrvnc"
+	defaultConfig {
+		applicationId "net.mimosa_pudica.ovrvnc"
 
-    // override app plugin abiFilters to test experimental 64-bit support
-    externalNativeBuild {
-        ndk {
-                abiFilters 'armeabi-v7a','arm64-v8a'
-        }
-        ndkBuild {
-                abiFilters 'armeabi-v7a','arm64-v8a'
-        }
-    } 
-  }
+		// override app plugin abiFilters to test experimental 64-bit support
+		externalNativeBuild {
+			ndk {
+				abiFilters 'armeabi-v7a','arm64-v8a'
+			}
+			ndkBuild {
+				abiFilters 'armeabi-v7a','arm64-v8a'
+			}
+		} 
+	}
 
-  sourceSets {
-    main {
-      manifest.srcFile 'AndroidManifest.xml'
-      java.srcDirs = ['java']
-      jniLibs.srcDir 'libs'
-      res.srcDirs = ['res']
-      assets.srcDirs = ['../assets']
-    }
-  }
+	sourceSets {
+		main {
+			manifest.srcFile 'AndroidManifest.xml'
+			java.srcDirs = ['java']
+			jniLibs.srcDir 'libs'
+			res.srcDirs = ['res']
+			assets.srcDirs = ['../assets']
+		}
+	}
 
-  lintOptions {
-    disable 'MissingTranslation'
-    disable 'ExtraTranslation'
-  }
+	lintOptions {
+		disable 'MissingTranslation'
+		disable 'ExtraTranslation'
+	}
 }

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <string>
+#define CPPTOML_NO_RTTI
 #include <cpptoml.h>
 
 
