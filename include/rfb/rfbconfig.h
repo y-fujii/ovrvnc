@@ -61,7 +61,7 @@
 #define LIBVNCSERVER_HAVE_STRSTR  1 
 
 /* Define to 1 if you have the `jpeg' library (-ljpeg). */
-/* #undef LIBVNCSERVER_HAVE_LIBJPEG */
+#define LIBVNCSERVER_HAVE_LIBJPEG 1
 
 /* Define if you have the `png' library (-lpng). */
 /* #undef LIBVNCSERVER_HAVE_LIBPNG */

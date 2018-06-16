@@ -8,6 +8,7 @@ LIBVNCSERVER_PATH       := $(LOCAL_PATH)/../../thirdparty/libvncserver
 LOCAL_MODULE            := ovrapp
 LOCAL_SRC_FILES := \
 	../../src/ovrapp.cpp \
+	../../src/turbojpeg_stub.c \
 	$(LIBVNCSERVER_PATH)/libvncclient/cursor.c \
 	$(LIBVNCSERVER_PATH)/libvncclient/listen.c \
 	$(LIBVNCSERVER_PATH)/libvncclient/rfbproto.c \

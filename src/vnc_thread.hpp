@@ -97,11 +97,13 @@ private:
 	void _process( std::string host, int const port ) {
 		while( true ) {
 			rfbClient* const rfb = rfbGetClient( 8, 3, 4 );
-			rfb->MallocFrameBuffer    = _on_resize;
-			rfb->GotFrameBufferUpdate = _on_update;
-			rfb->canHandleNewFBSize   = TRUE;
-			rfb->serverHost           = strdup( host.c_str() );
-			rfb->serverPort           = port;
+			rfb->MallocFrameBuffer     = _on_resize;
+			rfb->GotFrameBufferUpdate  = _on_update;
+			rfb->canHandleNewFBSize    = TRUE;
+			rfb->serverHost            = strdup( host.c_str() );
+			rfb->serverPort            = port;
+			rfb->appData.enableJPEG    = false;
+			rfb->appData.compressLevel = 1;
 			rfbClientSetClientData( rfb, nullptr, this );
 
 			if( !rfbInitClient( rfb, nullptr, nullptr ) ) {
