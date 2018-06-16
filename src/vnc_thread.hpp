@@ -21,8 +21,9 @@ struct vnc_thread_t {
 		int y1 = 0;
 	};
 
-	void run( std::string const& host, int const port ) {
-		_thread = std::thread( &vnc_thread_t::_process, this, host, port );
+	void run( std::string host, int const port, std::string pass ) {
+		_password = std::move( pass );
+		_thread = std::thread( &vnc_thread_t::_process, this, std::move( host ), port );
 	}
 
 	void detach() {
@@ -94,11 +95,17 @@ private:
 		}
 	}
 
+	static char* _on_password( rfbClient* rfb ) {
+		auto const self = reinterpret_cast<vnc_thread_t*>( rfbClientGetClientData( rfb, nullptr ) );
+		return strdup( self->_password.c_str() );
+	}
+
 	void _process( std::string host, int const port ) {
 		while( true ) {
 			rfbClient* const rfb = rfbGetClient( 8, 3, 4 );
 			rfb->MallocFrameBuffer     = _on_resize;
 			rfb->GotFrameBufferUpdate  = _on_update;
+			rfb->GetPassword           = _on_password;
 			rfb->canHandleNewFBSize    = TRUE;
 			rfb->serverHost            = strdup( host.c_str() );
 			rfb->serverPort            = port;
@@ -153,4 +160,5 @@ error:
 	std::queue<_pointer_event_t> _pointer_events;
 	std::mutex                   _pointer_mutex;
 	std::thread                  _thread;
+	std::string                  _password;
 };

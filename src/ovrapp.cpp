@@ -42,7 +42,7 @@ struct application_t: OVR::VrAppInterface {
 		if( intent_type == OVR::INTENT_LAUNCH ) {
 			vrapi_SetPropertyInt( app->GetJava(), VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER, 1 );
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
-			_vnc_thread.run( _config.host, _config.port );
+			_vnc_thread.run( _config.host, _config.port, _config.password );
 		}
 	}
 
