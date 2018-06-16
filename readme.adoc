@@ -4,6 +4,8 @@ WIP.
 
 == Install
 
+Download link:http://mimosa-pudica.net/tmp/ovrvnc-release.apk[ovrvnc-release.apk] .
+
 ----
 $ adb install ovrvnc-release.apk
 $ vi ovrvnc.toml # configure host, password, etc.
