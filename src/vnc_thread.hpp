@@ -82,7 +82,7 @@ private:
 		// XXX
 		for( int y = y0; y < y0 + h; ++y ) {
 			for( int x = x0; x < x0 + w; ++x ) {
-				reinterpret_cast<uint32_t*>( rfb->frameBuffer )[rfb->width * y + x] |= 0xff000000;
+				reinterpret_cast<uint32_t*>( rfb->frameBuffer )[rfb->width * y + x] &= 0x00ffffff;
 			}
 		}
 		{

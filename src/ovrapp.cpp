@@ -83,7 +83,7 @@ struct application_t: OVR::VrAppInterface {
 			ovrLayerCylinder2& layer = res.Layers[res.LayerCount++].Cylinder;
 			layer = vrapi_DefaultLayerCylinder2();
 			layer.Header.SrcBlend = VRAPI_FRAME_LAYER_BLEND_ONE;
-			layer.Header.DstBlend = VRAPI_FRAME_LAYER_BLEND_ONE_MINUS_SRC_ALPHA;
+			layer.Header.DstBlend = VRAPI_FRAME_LAYER_BLEND_SRC_ALPHA;
 			layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
 			layer.HeadPose = frame.Tracking.HeadPose;
 			for( size_t eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; ++eye ) {
@@ -115,7 +115,7 @@ private:
 			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen.get(), 0 ) );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
-			GLfloat borderColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			GLfloat borderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 			glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
