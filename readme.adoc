@@ -1,3 +1,11 @@
 = ovrvnc - VNC Viewer for Oculus Go
 
 WIP.
+
+== Install
+
+----
+$ adb install ovrvnc-release.apk
+$ vi ovrvnc.toml # configure host, password, etc.
+$ adb push ovrvnc.toml /sdcard/
+----
