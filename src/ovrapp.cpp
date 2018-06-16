@@ -53,9 +53,11 @@ struct application_t: OVR::VrAppInterface {
 		_scene.GetFrameMatrices( frame.FovX, frame.FovY, res.FrameMatrices );
 		_scene.GenerateFrameSurfaceList( res.FrameMatrices, res.Surfaces );
 
-		res.FrameIndex   = frame.FrameNumber;
-		res.DisplayTime  = frame.PredictedDisplayTimeInSeconds;
-		res.SwapInterval = app->GetSwapInterval();
+		res.FrameIndex       = frame.FrameNumber;
+		res.DisplayTime      = frame.PredictedDisplayTimeInSeconds;
+		res.SwapInterval     = app->GetSwapInterval();
+		res.ClearColorBuffer = true;
+		res.ClearColor       = OVR::Vector4f( _config.color_bg[0], _config.color_bg[1], _config.color_bg[2], 1.0f );
 
 		_handle_pointer( frame.PredictedDisplayTimeInSeconds );
 		_sync_screen();
@@ -73,7 +75,10 @@ struct application_t: OVR::VrAppInterface {
 		}
 
 		if( _screen != nullptr ) {
-			ovrMatrix4f const m_m = ovrMatrix4f_CreateScale( 100.0f, 100.0f, 100.0f );
+			// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
+			float const sx = _config.resolution / float( _screen_w );
+			float const fy = float( std::sqrt( 3.0 ) * M_PI / 2.0 ) * float( _screen_h ) / float( _config.resolution );
+			ovrMatrix4f const m_m = ovrMatrix4f_CreateScale( 100.0f, 100.0f * fy, 100.0f );
 
 			ovrLayerCylinder2& layer = res.Layers[res.LayerCount++].Cylinder;
 			layer = vrapi_DefaultLayerCylinder2();
@@ -87,14 +92,8 @@ struct application_t: OVR::VrAppInterface {
 
 				ovrMatrix4f const m_mv = ovrMatrix4f_Multiply( &frame.Tracking.Eye[eye].ViewMatrix, &m_m );
 				layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_Inverse( &m_mv );
-
-				// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
-				float const sx = _config.resolution / float( _screen_w );
-				float const sy = float( 2.0 * _config.resolution / (std::sqrt( 3.0 ) * M_PI) ) / float( _screen_h );
 				layer.Textures[eye].TextureMatrix.M[0][0] = sx;
-				layer.Textures[eye].TextureMatrix.M[1][1] = sy;
 				layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * sx + 0.5f;
-				layer.Textures[eye].TextureMatrix.M[1][2] = -0.5f * sy + 0.5f;
 			}
 		}
 
