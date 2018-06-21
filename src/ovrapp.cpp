@@ -25,6 +25,12 @@ namespace std {
 	};
 };
 
+struct model_owned_t: OVR::ModelInScene {
+	virtual ~model_owned_t() {
+		delete Definition;
+	}
+};
+
 struct application_t: OVR::VrAppInterface {
 	application_t( std::string const& ext_path ) {
 		_config = config_load( ext_path + "/ovrvnc.toml" );
@@ -43,6 +49,24 @@ struct application_t: OVR::VrAppInterface {
 			vrapi_SetPropertyInt( app->GetJava(), VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER, 1 );
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
 			_vnc_thread.run( _config.host, _config.port, _config.password );
+			if( !_config.model_path.empty() ) {
+				OVR::MaterialParms params;
+				params.UseSrgbTextureFormats = true;
+				params.EnableDiffuseAniso    = true;
+				OVR::ModelFile const* const model = LoadModelFile( _config.model_path.c_str(), _scene.GetDefaultGLPrograms(), params );
+				if( model != nullptr ) {
+					_model.SetModelFile( model );
+					_model.State.SetMatrix(
+						OVR::Matrix4f::Translation( _config.model_translation  ) *
+						OVR::Matrix4f::RotationX  ( _config.model_euler_zyx[0] ) *
+						OVR::Matrix4f::RotationY  ( _config.model_euler_zyx[1] ) *
+						OVR::Matrix4f::RotationZ  ( _config.model_euler_zyx[2] ) *
+						OVR::Matrix4f::Scaling    ( _config.model_scaling      ) *
+						_model.State.GetMatrix()
+					);
+					_scene.AddModel( &_model );
+				}
+			}
 		}
 	}
 
@@ -57,12 +81,12 @@ struct application_t: OVR::VrAppInterface {
 		res.DisplayTime      = frame.PredictedDisplayTimeInSeconds;
 		res.SwapInterval     = app->GetSwapInterval();
 		res.ClearColorBuffer = true;
-		res.ClearColor       = OVR::Vector4f( _config.color_bg[0], _config.color_bg[1], _config.color_bg[2], 1.0f );
+		res.ClearColor       = _config.color_bg;
 
 		_handle_pointer( frame.PredictedDisplayTimeInSeconds );
 		_sync_screen();
 
-		/* projection layer (currently unused). */ {
+		/* projection layer */ {
 			ovrLayerProjection2& layer = res.Layers[res.LayerCount++].Projection;
 			layer = vrapi_DefaultLayerProjection2();
 			layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
@@ -77,7 +101,7 @@ struct application_t: OVR::VrAppInterface {
 		if( _screen != nullptr ) {
 			// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
 			float const sx = _config.resolution / float( _screen_w );
-			float const fy = float( std::sqrt( 3.0 ) * M_PI / 2.0 ) * float( _screen_h ) / float( _config.resolution );
+			float const fy = float( std::sqrt( 3.0 ) * M_PI / 2.0 ) * float( _screen_h ) / _config.resolution;
 			ovrMatrix4f const m_m = ovrMatrix4f_CreateScale( 100.0f, 100.0f * fy, 100.0f );
 
 			ovrLayerCylinder2& layer = res.Layers[res.LayerCount++].Cylinder;
@@ -209,6 +233,7 @@ private:
 
 	config_t                                  _config;
 	OVR::OvrSceneView                         _scene;
+	model_owned_t                             _model;
 	std::unique_ptr<ovrTextureSwapChain>      _screen;
 	int                                       _screen_w = 0;
 	int                                       _screen_h = 0;
