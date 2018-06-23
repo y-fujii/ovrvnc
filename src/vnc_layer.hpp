@@ -55,7 +55,7 @@ struct vnc_layer_t {
 	}
 
 	void handle_pointer( ovrTracking const& tracking, uint32_t const buttons ) {
-		ovrMatrix4f const m = ovrMatrix4f_CreateFromQuaternion( &tracking.HeadPose.Pose.Orientation );
+		OVR::Matrix4f const m = transform.Inverted() * ovrMatrix4f_CreateFromQuaternion( &tracking.HeadPose.Pose.Orientation );
 		float const x = m.M[0][2];
 		float const y = m.M[1][2];
 		float const z = m.M[2][2];
@@ -78,7 +78,7 @@ struct vnc_layer_t {
 		// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
 		float const sx = resolution / float( _screen_w );
 		float const fy = float( std::sqrt( 3.0 ) * M_PI / 2.0 ) * float( _screen_h ) / resolution;
-		ovrMatrix4f const m_m = ovrMatrix4f_CreateScale( radius, radius * fy, radius );
+		OVR::Matrix4f const m_m = transform * OVR::Matrix4f::Scaling( radius, radius * fy, radius );
 
 		ovrLayerCylinder2 layer = vrapi_DefaultLayerCylinder2();
 		layer.Header.SrcBlend = VRAPI_FRAME_LAYER_BLEND_ONE;
@@ -89,16 +89,16 @@ struct vnc_layer_t {
 			layer.Textures[eye].ColorSwapChain = _screen.get();
 			layer.Textures[eye].SwapChainIndex = 0;
 
-			ovrMatrix4f const m_mv = ovrMatrix4f_Multiply( &frame.Tracking.Eye[eye].ViewMatrix, &m_m );
-			layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_Inverse( &m_mv );
+			layer.Textures[eye].TexCoordsFromTanAngles = (OVR::Matrix4f( frame.Tracking.Eye[eye].ViewMatrix ) * m_m).Inverted();
 			layer.Textures[eye].TextureMatrix.M[0][0] = sx;
 			layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * sx + 0.5f;
 		}
 		return layer;
 	}
 
-	double resolution = 2560.0f;
-	double radius     =  100.0f;
+	double        resolution = 2560.0f;
+	double        radius     =  100.0f;
+	OVR::Matrix4f transform;
 
 private:
 	std::unique_ptr<ovrTextureSwapChain> _screen;

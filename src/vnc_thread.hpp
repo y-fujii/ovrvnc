@@ -181,9 +181,9 @@ private:
 		}
 	}
 
-	region_t                     _region;
-	std::mutex                   _region_mutex;
-	int                          _event_pipe[2];
-	std::thread                  _thread;
-	std::string                  _password;
+	region_t    _region;
+	std::mutex  _region_mutex;
+	int         _event_pipe[2];
+	std::thread _thread;
+	std::string _password;
 };

@@ -33,6 +33,9 @@ struct application_t: OVR::VrAppInterface {
 		if( intent_type == OVR::INTENT_LAUNCH ) {
 			vrapi_SetPropertyInt( app->GetJava(), VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER, 1 );
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
+			_vnc_layer.transform =
+				OVR::Matrix4f::RotationY( float( M_PI / 180.0 ) * _config.longitude ) *
+				OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * _config.latitude  );
 			_vnc_layer.run( _config.host, _config.port, _config.password );
 		}
 	}
