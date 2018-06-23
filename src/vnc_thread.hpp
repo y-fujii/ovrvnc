@@ -7,6 +7,7 @@
 #include <string>
 #include <thread>
 #include <mutex>
+#include <poll.h>
 #include <rfb/rfbclient.h>
 
 
@@ -20,6 +21,17 @@ struct vnc_thread_t {
 		int x1 = 0;
 		int y1 = 0;
 	};
+
+	~vnc_thread_t() {
+		close( _event_pipe[1] );
+		close( _event_pipe[0] );
+	}
+
+	vnc_thread_t() {
+		if( pipe2( _event_pipe, O_CLOEXEC | O_NONBLOCK ) < 0 ) {
+			throw std::runtime_error( "pipe" );
+		}
+	}
 
 	void run( std::string host, int const port, std::string pass ) {
 		_password = std::move( pass );
@@ -47,17 +59,17 @@ struct vnc_thread_t {
 		return tmp;
 	}
 
-	void push_mouse_event( int x, int y, bool b0, bool b1 ) {
-		int button = (b0 ? rfbButton1Mask : 0) | (b1 ? rfbButton3Mask : 0);
-		std::lock_guard<std::mutex> lock( _pointer_mutex );
-		_pointer_events.push( { x, y, button } );
+	void push_mouse_event( uint16_t x, uint16_t y, bool b0, bool b1 ) {
+		_pointer_event_t ev{ x, y, (b0 ? rfbButton1Mask : 0u) | (b1 ? rfbButton3Mask : 0u) };
+		// writing data less than PIPE_BUF to a pipe is atomic.
+		write( _event_pipe[1], &ev, sizeof( ev ) );
 	}
 
 private:
 	struct _pointer_event_t {
-		int x;
-		int y;
-		int button;
+		uint16_t x;
+		uint16_t y;
+		uint32_t button;
 	};
 
 	static rfbBool _on_resize( rfbClient* rfb ) {
@@ -100,6 +112,51 @@ private:
 		return strdup( self->_password.c_str() );
 	}
 
+	// XXX: separating sender/receiver threads is possible with libvncserver?
+	bool _process_event( rfbClient* const rfb ) {
+		pollfd fds[2];
+		fds[0].fd = rfb->sock;
+		fds[0].events = POLLIN;
+		fds[1].fd = _event_pipe[0];
+		fds[1].events = POLLIN;
+		if( poll( fds, 2, -1 ) < 0 ) {
+			__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "poll" );
+			return false;
+		}
+
+		if( (fds[1].revents & POLLIN) != 0 ) {
+			pollfd fds[1];
+			fds[0].fd = rfb->sock;
+			fds[0].events = POLLOUT;
+			if( poll( fds, 1, 0 ) < 0 ) {
+				__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "poll" );
+				return false;
+			}
+			if( (fds[0].revents & POLLOUT) != 0 ) {
+				_pointer_event_t ev;
+				ssize_t n = read( _event_pipe[0], &ev, sizeof( ev ) );
+				// should have read atomically.
+				if( n != sizeof( ev ) ) {
+					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "read" );
+					return false;
+				}
+				if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
+					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "SendPointerEvent" );
+					return false;
+				}
+			}
+		}
+
+		if( (fds[0].revents & POLLIN) != 0 ) {
+			if( !HandleRFBServerMessage( rfb ) ) {
+				__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "HandleRFBServerMessage" );
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	void _process( std::string host, int const port ) {
 		while( true ) {
 			rfbClient* const rfb = rfbGetClient( 8, 3, 4 );
@@ -120,45 +177,15 @@ private:
 				continue;
 			}
 
-			// is it possible to split receiver/sender threads with libvncserver?
-			std::queue<_pointer_event_t> events;
-			while( true ) {
-				{
-					std::lock_guard<std::mutex> lock( _pointer_mutex );
-					std::swap( events, _pointer_events );
-				}
-				while( !events.empty() ) {
-					_pointer_event_t const& ev = events.front();
-					// XXX: reduce pointer move events.
-					if( !SendPointerEvent( rfb, ev.x, ev.y, ev.button ) ) {
-						__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "SendPointerEvent" );
-						goto error;
-					}
-					events.pop();
-				}
+			while( _process_event( rfb ) );
 
-				int const i = WaitForMessage( rfb, 500 );
-				if( i < 0 ) {
-					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "WaitForMessage" );
-					break;
-				}
-				if( i == 0 ) {
-					continue;
-				}
-				if( !HandleRFBServerMessage( rfb ) ) {
-					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "HandleRFBServerMessage" );
-					break;
-				}
-			}
-error:
 			rfbClientCleanup( rfb );
 		}
 	}
 
 	region_t                     _region;
 	std::mutex                   _region_mutex;
-	std::queue<_pointer_event_t> _pointer_events;
-	std::mutex                   _pointer_mutex;
+	int                          _event_pipe[2];
 	std::thread                  _thread;
 	std::string                  _password;
 };
