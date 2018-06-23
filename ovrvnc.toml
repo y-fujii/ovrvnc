@@ -1,6 +1,15 @@
-host = "192.168.179.5"
-#port = 5900
-#password = "hogehoge"
-#latitude  = 30.0
-#longitude = 45.0
 #color_bg = [0.0, 0.0, 0.0]
+
+[[screens]]
+host = "192.168.179.5"
+port = 5900
+#password = "hogehoge"
+#latitude  = 0.0
+#longitude = 0.0
+
+#[[screens]]
+#host = "192.168.179.5"
+#port = 5901
+#password = "hogehoge"
+#latitude  = 0.0
+#longitude = 180.0

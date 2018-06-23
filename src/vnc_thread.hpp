@@ -22,6 +22,9 @@ struct vnc_thread_t {
 		int y1 = 0;
 	};
 
+	vnc_thread_t( vnc_thread_t const& ) = delete;
+	vnc_thread_t( vnc_thread_t&& )      = delete;
+
 	~vnc_thread_t() {
 		close( _event_pipe[1] );
 		close( _event_pipe[0] );

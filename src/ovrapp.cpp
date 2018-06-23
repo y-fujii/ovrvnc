@@ -33,10 +33,14 @@ struct application_t: OVR::VrAppInterface {
 		if( intent_type == OVR::INTENT_LAUNCH ) {
 			vrapi_SetPropertyInt( app->GetJava(), VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER, 1 );
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
-			_vnc_layer.transform =
-				OVR::Matrix4f::RotationY( float( M_PI / 180.0 ) * _config.longitude ) *
-				OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * _config.latitude  );
-			_vnc_layer.run( _config.host, _config.port, _config.password );
+			for( auto const& screen: _config.screens ) {
+				auto vnc = std::make_unique<vnc_layer_t>();
+				vnc->transform =
+					OVR::Matrix4f::RotationY( float( M_PI / 180.0 ) * screen.longitude ) *
+					OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * screen.latitude  );
+				vnc->run( screen.host, screen.port, screen.password );
+				_vnc_layers.push_back( std::move( vnc ) );
+			}
 		}
 	}
 
@@ -56,9 +60,10 @@ struct application_t: OVR::VrAppInterface {
 		ovrTracking tracking;
 		uint32_t    buttons;
 		if( _get_pointer( frame.PredictedDisplayTimeInSeconds, tracking, buttons ) ) {
-			_vnc_layer.handle_pointer( tracking, buttons );
+			for( auto const& vnc: _vnc_layers ) {
+				vnc->handle_pointer( tracking, buttons );
+			}
 		}
-		_vnc_layer.update();
 
 		/* projection layer (currently unused). */ {
 			ovrLayerProjection2& layer = res.Layers[res.LayerCount++].Projection;
@@ -72,8 +77,11 @@ struct application_t: OVR::VrAppInterface {
 			}
 		}
 
-		if( auto layer = _vnc_layer.layer( frame ) ) {
-			res.Layers[res.LayerCount++].Cylinder = *layer;
+		for( auto const& vnc: _vnc_layers ) {
+			vnc->update();
+			if( auto layer = vnc->layer( frame ) ) {
+				res.Layers[res.LayerCount++].Cylinder = *layer;
+			}
 		}
 
 		return res;
@@ -137,9 +145,9 @@ private:
 		}
 	}
 
-	config_t          _config;
-	OVR::OvrSceneView _scene;
-	vnc_layer_t       _vnc_layer;
+	config_t                                  _config;
+	OVR::OvrSceneView                         _scene;
+	std::vector<std::unique_ptr<vnc_layer_t>> _vnc_layers;
 };
 
 #if defined( OVR_OS_ANDROID )
