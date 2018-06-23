@@ -144,6 +144,8 @@ private:
 					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "SendPointerEvent" );
 					return false;
 				}
+				// events may remain.  process them first.
+				return true;
 			}
 		}
 
