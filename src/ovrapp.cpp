@@ -12,18 +12,9 @@
 #include "App.h"
 #include "SceneView.h"
 #pragma GCC diagnostic pop
-#include "vnc_thread.hpp"
+#include "vnc_layer.hpp"
 #include "config.hpp"
 
-
-namespace std {
-	template<>
-	struct default_delete<ovrTextureSwapChain> {
-		void operator()( ovrTextureSwapChain* self ) const {
-			vrapi_DestroyTextureSwapChain( self );
-		}
-	};
-};
 
 struct application_t: OVR::VrAppInterface {
 	application_t( std::string const& ext_path ) {
@@ -42,7 +33,7 @@ struct application_t: OVR::VrAppInterface {
 		if( intent_type == OVR::INTENT_LAUNCH ) {
 			vrapi_SetPropertyInt( app->GetJava(), VRAPI_REORIENT_HMD_ON_CONTROLLER_RECENTER, 1 );
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
-			_vnc_thread.run( _config.host, _config.port, _config.password );
+			_vnc_layer.run( _config.host, _config.port, _config.password );
 		}
 	}
 
@@ -59,8 +50,12 @@ struct application_t: OVR::VrAppInterface {
 		res.ClearColorBuffer = true;
 		res.ClearColor       = OVR::Vector4f( _config.color_bg[0], _config.color_bg[1], _config.color_bg[2], 1.0f );
 
-		_handle_pointer( frame.PredictedDisplayTimeInSeconds );
-		_sync_screen();
+		ovrTracking tracking;
+		uint32_t    buttons;
+		if( _get_pointer( frame.PredictedDisplayTimeInSeconds, tracking, buttons ) ) {
+			_vnc_layer.handle_pointer( tracking, buttons );
+		}
+		_vnc_layer.update();
 
 		/* projection layer (currently unused). */ {
 			ovrLayerProjection2& layer = res.Layers[res.LayerCount++].Projection;
@@ -74,75 +69,22 @@ struct application_t: OVR::VrAppInterface {
 			}
 		}
 
-		if( _screen != nullptr ) {
-			// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
-			float const sx = _config.resolution / float( _screen_w );
-			float const fy = float( std::sqrt( 3.0 ) * M_PI / 2.0 ) * float( _screen_h ) / float( _config.resolution );
-			ovrMatrix4f const m_m = ovrMatrix4f_CreateScale( 100.0f, 100.0f * fy, 100.0f );
-
-			ovrLayerCylinder2& layer = res.Layers[res.LayerCount++].Cylinder;
-			layer = vrapi_DefaultLayerCylinder2();
-			layer.Header.SrcBlend = VRAPI_FRAME_LAYER_BLEND_ONE;
-			layer.Header.DstBlend = VRAPI_FRAME_LAYER_BLEND_SRC_ALPHA;
-			layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
-			layer.HeadPose = frame.Tracking.HeadPose;
-			for( size_t eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; ++eye ) {
-				layer.Textures[eye].ColorSwapChain = _screen.get();
-				layer.Textures[eye].SwapChainIndex = 0;
-
-				ovrMatrix4f const m_mv = ovrMatrix4f_Multiply( &frame.Tracking.Eye[eye].ViewMatrix, &m_m );
-				layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_Inverse( &m_mv );
-				layer.Textures[eye].TextureMatrix.M[0][0] = sx;
-				layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * sx + 0.5f;
-			}
+		if( auto layer = _vnc_layer.layer( frame ) ) {
+			res.Layers[res.LayerCount++].Cylinder = *layer;
 		}
 
 		return res;
 	}
 
 private:
-	void _sync_screen() {
-		vnc_thread_t::region_t const region = _vnc_thread.get_update_region();
-		if( region.buf == nullptr ) {
-			return;
-		}
-		if( _screen_w != region.w || _screen_h != region.h ) {
-			_screen_w = region.w;
-			_screen_h = region.h;
-			_screen = std::unique_ptr<ovrTextureSwapChain>(
-				vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D, VRAPI_TEXTURE_FORMAT_8888_sRGB, region.w, region.h, 1, false )
-			);
-			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen.get(), 0 ) );
-			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
-			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
-			GLfloat borderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-			glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
-			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4.0f );
-		}
-		if( region.x0 < region.x1 && region.y0 < region.y1 ) {
-			uint32_t const* const buf = region.buf->data() + region.w * region.y0 + region.x0;
-			int const w = region.x1 - region.x0;
-			int const h = region.y1 - region.y0;
-			glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
-			glPixelStorei( GL_UNPACK_ROW_LENGTH, region.w );
-			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen.get(), 0 ) );
-			glTexSubImage2D( GL_TEXTURE_2D, 0, region.x0, region.y0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf );
-		}
-		glBindTexture( GL_TEXTURE_2D, 0 );
-	}
-
-	void _handle_pointer( double const time ) {
+	bool _get_pointer( double const time, ovrTracking& tracking, uint32_t& buttons ) {
 		ovrMobile* const mobile = app->GetOvrMobile();
 		for( uint32_t i = 0; true; ++i ) {
 			ovrInputCapabilityHeader caps_header;
 			if( vrapi_EnumerateInputDevices( mobile, i, &caps_header ) < 0 ) {
-				break;
+				return false;
 			}
 
-			bool button_0 = false;
-			bool button_1 = false;
 			if( (caps_header.Type & ovrControllerType_TrackedRemote) != 0 ) {
 				ovrInputTrackedRemoteCapabilities caps;
 				caps.Header = caps_header;
@@ -158,8 +100,7 @@ private:
 				if( vrapi_GetCurrentInputState( mobile, caps_header.DeviceID, &state.Header ) != ovrSuccess ) {
 					continue;
 				}
-				button_0 = (state.Buttons & ovrButton_A) != 0;
-				button_1 = (state.Buttons & ovrButton_Enter) != 0;
+				buttons = state.Buttons;
 			}
 			else if( (caps_header.Type & ovrControllerType_Headset) != 0 ) {
 				ovrInputHeadsetCapabilities caps;
@@ -176,14 +117,12 @@ private:
 				if( vrapi_GetCurrentInputState( mobile, caps_header.DeviceID, &state.Header ) != ovrSuccess ) {
 					continue;
 				}
-				button_0 = (state.Buttons & ovrButton_A) != 0;
-				button_1 = (state.Buttons & ovrButton_Enter) != 0;
+				buttons = state.Buttons;
 			}
 			else {
 				continue;
 			}
 
-			ovrTracking tracking;
 			if( vrapi_GetInputTrackingState( mobile, caps_header.DeviceID, time, &tracking ) != ovrSuccess ) {
 				continue;
 			}
@@ -191,28 +130,13 @@ private:
 				continue;
 			}
 
-			ovrMatrix4f const m = ovrMatrix4f_CreateFromQuaternion( &tracking.HeadPose.Pose.Orientation );
-			float const x = m.M[0][2];
-			float const y = m.M[1][2];
-			float const z = m.M[2][2];
-			float const u = std::atan2( x, z );
-			float const v = y / std::hypot( x, z );
-			int const iu = int( std::floor( float( -_config.resolution / M_PI ) * u + 0.5f * float( _screen_w ) ) );
-			int const iv = int( std::floor( float( +_config.resolution / M_PI ) * v + 0.5f * float( _screen_h ) ) );
-			if( 0 <= iu && iu < _screen_w && 0 <= iv && iv < _screen_h ) {
-				_vnc_thread.push_mouse_event( iu, iv, button_0, button_1 );
-			}
-
-			break;
+			return true;
 		}
 	}
 
-	config_t                                  _config;
-	OVR::OvrSceneView                         _scene;
-	std::unique_ptr<ovrTextureSwapChain>      _screen;
-	int                                       _screen_w = 0;
-	int                                       _screen_h = 0;
-	vnc_thread_t                              _vnc_thread;
+	config_t          _config;
+	OVR::OvrSceneView _scene;
+	vnc_layer_t       _vnc_layer;
 };
 
 #if defined( OVR_OS_ANDROID )

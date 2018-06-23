@@ -38,10 +38,6 @@ struct vnc_thread_t {
 		_thread = std::thread( &vnc_thread_t::_process, this, std::move( host ), port );
 	}
 
-	void detach() {
-		_thread.detach();
-	}
-
 	void join() {
 		_thread.join();
 	}
@@ -59,7 +55,7 @@ struct vnc_thread_t {
 		return tmp;
 	}
 
-	void push_mouse_event( uint16_t x, uint16_t y, bool b0, bool b1 ) {
+	void push_mouse_event( uint16_t const x, uint16_t const y, bool const b0, bool const b1 ) {
 		_pointer_event_t ev{ x, y, (b0 ? rfbButton1Mask : 0u) | (b1 ? rfbButton3Mask : 0u) };
 		// writing data less than PIPE_BUF to a pipe is atomic.
 		write( _event_pipe[1], &ev, sizeof( ev ) );

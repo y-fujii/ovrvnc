@@ -25,7 +25,7 @@ LOCAL_CFLAGS += \
 	-isystem $(LIBVNCSERVER_PATH)/common \
 	-isystem $(LOCAL_PATH)/../../include
 LOCAL_CPPFLAGS += \
-	-std=gnu++14 -pedantic -Wall -Wextra -fexceptions \
+	-std=gnu++17 -pedantic -Wall -Wextra -fexceptions \
 	-isystem $(LOCAL_PATH)/../../thirdparty/cpptoml/include \
 
 include $(BUILD_SHARED_LIBRARY)
