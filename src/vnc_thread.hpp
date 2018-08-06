@@ -36,9 +36,9 @@ struct vnc_thread_t {
 		}
 	}
 
-	void run( std::string host, int const port, std::string pass ) {
+	void run( std::string host, int const port, std::string pass, bool lossy ) {
 		_password = std::move( pass );
-		_thread = std::thread( &vnc_thread_t::_process, this, std::move( host ), port );
+		_thread = std::thread( &vnc_thread_t::_process, this, std::move( host ), port, lossy );
 	}
 
 	void join() {
@@ -158,7 +158,7 @@ private:
 		return true;
 	}
 
-	void _process( std::string host, int const port ) {
+	void _process( std::string host, int const port, bool lossy ) {
 		while( true ) {
 			rfbClient* const rfb = rfbGetClient( 8, 3, 4 );
 			rfb->MallocFrameBuffer     = _on_resize;
@@ -167,7 +167,8 @@ private:
 			rfb->canHandleNewFBSize    = TRUE;
 			rfb->serverHost            = strdup( host.c_str() );
 			rfb->serverPort            = port;
-			rfb->appData.enableJPEG    = false;
+			rfb->appData.enableJPEG    = lossy ? TRUE : FALSE;
+			rfb->appData.qualityLevel  = 8;
 			rfb->appData.compressLevel = 1;
 			rfbClientSetClientData( rfb, nullptr, this );
 

@@ -14,8 +14,8 @@ namespace std {
 }
 
 struct vnc_layer_t {
-	void run( std::string host, int const port, std::string password ) {
-		_thread.run( std::move( host ), port, std::move( password ) );
+	void run( std::string host, int const port, std::string password, bool lossy ) {
+		_thread.run( std::move( host ), port, std::move( password ), lossy );
 	}
 
 	void join() {

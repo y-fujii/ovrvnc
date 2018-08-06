@@ -8,7 +8,6 @@ LIBVNCSERVER_PATH       := $(LOCAL_PATH)/../../thirdparty/libvncserver
 LOCAL_MODULE            := ovrapp
 LOCAL_SRC_FILES := \
 	../../src/ovrapp.cpp \
-	../../src/turbojpeg_stub.c \
 	$(LIBVNCSERVER_PATH)/libvncclient/cursor.c \
 	$(LIBVNCSERVER_PATH)/libvncclient/listen.c \
 	$(LIBVNCSERVER_PATH)/libvncclient/rfbproto.c \
@@ -18,7 +17,7 @@ LOCAL_SRC_FILES := \
 	$(LIBVNCSERVER_PATH)/libvncclient/tls_none.c
 
 LOCAL_STATIC_LIBRARIES := vrmodel vrappframework libovrkernel
-LOCAL_SHARED_LIBRARIES := vrapi
+LOCAL_SHARED_LIBRARIES := vrapi turbojpeg
 LOCAL_CFLAGS += \
 	-Wno-error \
 	-isystem $(LIBVNCSERVER_PATH) \
@@ -29,6 +28,11 @@ LOCAL_CPPFLAGS += \
 	-isystem $(LOCAL_PATH)/../../thirdparty/cpptoml/include
 
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := turbojpeg
+LOCAL_SRC_FILES := $(LOCAL_PATH)/../../thirdparty/libjpeg-turbo/$(TARGET_ARCH_ABI)/libturbojpeg.so
+include $(PREBUILT_SHARED_LIBRARY)
 
 $(call import-module,LibOVRKernel/Projects/Android/jni)
 $(call import-module,VrApi/Projects/AndroidPrebuilt/jni)

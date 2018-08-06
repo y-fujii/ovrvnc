@@ -14,6 +14,7 @@ struct config_t {
 		std::string password;
 		float       latitude  = 0.0f;
 		float       longitude = 0.0f;
+		bool        lossy     = false;
 	};
 
 	float                 resolution  = 2560.0f;
@@ -40,7 +41,8 @@ inline config_t config_load( std::string const& fn ) {
 				screen->get_as<int>( "port" ).value_or( 5900 ),
 				screen->get_as<std::string>( "password" ).value_or( {} ),
 				float( screen->get_as<double>( "latitude"  ).value_or( 0.0 ) ),
-				float( screen->get_as<double>( "longitude" ).value_or( 0.0 ) )
+				float( screen->get_as<double>( "longitude" ).value_or( 0.0 ) ),
+				screen->get_as<bool>( "lossy" ).value_or( false )
 			} );
 		}
 	}

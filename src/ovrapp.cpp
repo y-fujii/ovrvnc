@@ -38,7 +38,7 @@ struct application_t: OVR::VrAppInterface {
 				vnc->transform =
 					OVR::Matrix4f::RotationY( float( M_PI / 180.0 ) * screen.longitude ) *
 					OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * screen.latitude  );
-				vnc->run( screen.host, screen.port, screen.password );
+				vnc->run( screen.host, screen.port, screen.password, screen.lossy );
 				_vnc_layers.push_back( std::move( vnc ) );
 			}
 		}

@@ -2,7 +2,7 @@
 
 WIP.
 
-== Install
+== Install prebuilt binary
 
 Download link:http://mimosa-pudica.net/tmp/ovrvnc-release.apk[ovrvnc-release.apk] .
 
@@ -10,4 +10,77 @@ Download link:http://mimosa-pudica.net/tmp/ovrvnc-release.apk[ovrvnc-release.apk
 $ adb install ovrvnc-release.apk
 $ vi ovrvnc.toml # configure host, password, etc.
 $ adb push ovrvnc.toml /sdcard/
+----
+
+== Configuration
+
+`/sdcard/ovrvnc.toml`:
+----
+#color_bg = [0.0, 0.0, 0.0]
+
+[[screens]]
+host = "192.168.179.5"
+port = 5900
+#password = "hogehoge"
+#latitude  = 0.0
+#longitude = 0.0
+#lossy = false
+
+#[[screens]]
+#host = "192.168.179.5"
+#port = 5901
+#password = "hogehoge"
+#latitude  = 0.0
+#longitude = 180.0
+#lossy = false
+----
+
+== Build
+
+XXX
+
+Apply a patch to Oculus mobile SDK:
+----
+--- VrAppFramework/Src/GlTexture.cpp
++++ VrAppFramework/Src/GlTexture.cpp
+@@ -27,6 +27,7 @@
+ #include "OVR_PerfTimer.h"
+
+ #include <algorithm>
++#include <cmath>
+
+ #if defined( OVR_OS_ANDROID )
+ #define GL_COMPRESSED_RGBA_ASTC_4x4_KHR   0x93B0
+--- VrApp.gradle
++++ VrApp.gradle
+@@ -316,7 +316,7 @@
+     @TaskAction
+     genDebugKeystore() {
+         if ( !project.file("android.debug.keystore").exists() ) {
+-            def pythonCmd = 'python'
++            def pythonCmd = 'python2'
+             if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                 pythonCmd = "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_keystore.py.bat"
+                 project.exec {
+@@ -355,7 +355,7 @@
+                 buildType
+             }
+         } else {
+-            def pythonCmd = 'python'
++            def pythonCmd = 'python2'
+             project.exec {
+                 commandLine pythonCmd,
+                 "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_sdklibs.py",
+----
+
+Build:
+----
+export     ANDROID_HOME=...
+export ANDROID_NDK_HOME=...
+export  OCULUS_SDK_PATH=...
+
+cd thirdparty/libjpeg-turbo
+./build.sh
+cd ../..
+make
 ----

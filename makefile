@@ -1,6 +1,7 @@
 .PHONY: test clean
 
 test:
+	adb uninstall net.mimosa_pudica.ovrvnc
 	cd android && \
 	gradle installRelease && \
 	adb push ../ovrvnc.toml /sdcard/ && \
