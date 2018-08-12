@@ -25,7 +25,7 @@ struct application_t: OVR::VrAppInterface {
 		settings.UseSrgbFramebuffer = true;
 		settings.RenderMode         = OVR::RENDERMODE_MULTIVIEW;
 		settings.TrackingTransform  = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
-		settings.CpuLevel           = 2;
+		settings.CpuLevel           = 3;
 		settings.GpuLevel           = 0;
 	}
 
@@ -35,6 +35,7 @@ struct application_t: OVR::VrAppInterface {
 			vrapi_SetDisplayRefreshRate( app->GetOvrMobile(), 72.0f );
 			for( auto const& screen: _config.screens ) {
 				auto vnc = std::make_unique<vnc_layer_t>();
+				vnc->resolution = _config.resolution;
 				vnc->transform =
 					OVR::Matrix4f::RotationY( float( M_PI / 180.0 ) * screen.longitude ) *
 					OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * screen.latitude  );

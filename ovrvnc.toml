@@ -2,16 +2,16 @@
 
 [[screens]]
 host = "192.168.179.5"
-port = 5900
-#password = "hogehoge"
+#port = 5900
+#password = ""
 latitude  = -15.0
 #longitude = 0.0
 #lossy = true
 
-#[[screens]]
-#host = "192.168.179.5"
-#port = 5901
-#password = "hogehoge"
-#latitude  = 0.0
-#longitude = 180.0
-#lossy = false
+[[screens]]
+host = "192.168.179.4"
+#port = 5900
+password = "hogehoge"
+latitude  = -15.0
+longitude = 180.0
+#lossy = true

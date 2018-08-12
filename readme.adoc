@@ -8,31 +8,44 @@ Download link:http://mimosa-pudica.net/tmp/ovrvnc-release.apk[ovrvnc-release.apk
 
 ----
 $ adb install ovrvnc-release.apk
-$ vi ovrvnc.toml # configure host, password, etc.
+$ vi ovrvnc.toml # configure host, password, etc.  See below.
 $ adb push ovrvnc.toml /sdcard/
+----
+
+For Xorg users, x0vncserver >= 1.9 bundled in TigerVNC with following arguments
+is recommended.
+----
+x0vncserver --comparefb=1 --maxprocessorusage=100
 ----
 
 == Configuration
 
-`/sdcard/ovrvnc.toml`:
+Minimal example of `/sdcard/ovrvnc.toml`:
+----
+[[screens]]
+host = "hogehoge"
+----
+
+More complex example:
 ----
 #color_bg = [0.0, 0.0, 0.0]
 
 [[screens]]
 host = "192.168.179.5"
-port = 5900
-#password = "hogehoge"
-#latitude  = 0.0
+#port = 5900
+#password = ""
+latitude  = -15.0
 #longitude = 0.0
-#lossy = false
+#lossy = true
 
-#[[screens]]
-#host = "192.168.179.5"
-#port = 5901
-#password = "hogehoge"
-#latitude  = 0.0
-#longitude = 180.0
-#lossy = false
+[[screens]]
+host = "192.168.179.4"
+#port = 5900
+password = "hogehoge"
+latitude  = -15.0
+longitude = 180.0
+#lossy = true
+#color_bg = [0.0, 0.0, 0.0]
 ----
 
 == Build
