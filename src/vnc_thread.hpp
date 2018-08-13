@@ -2,6 +2,7 @@
 #pragma once
 
 #include <memory>
+#include <limits>
 #include <vector>
 #include <queue>
 #include <string>
@@ -94,14 +95,26 @@ private:
 			}
 		}
 		*/
+		self->_x0 = std::min( self->_x0, x0 );
+		self->_y0 = std::min( self->_y0, y0 );
+		self->_x1 = std::max( self->_x1, x0 + w );
+		self->_y1 = std::max( self->_y1, y0 + h );
+	}
+
+	static void _on_finish( rfbClient* rfb ) {
+		auto const self = reinterpret_cast<vnc_thread_t*>( rfbClientGetClientData( rfb, nullptr ) );
 		{
-			auto& region = self->_region;
 			std::lock_guard<std::mutex> lock( self->_region_mutex );
-			region.x0 = std::min( region.x0, x0 );
-			region.y0 = std::min( region.y0, y0 );
-			region.x1 = std::min( std::max( region.x1, x0 + w ), region.w );
-			region.y1 = std::min( std::max( region.y1, y0 + h ), region.h );
+			auto& region = self->_region;
+			region.x0 = std::min( region.x0, self->_x0 );
+			region.y0 = std::min( region.y0, self->_y0 );
+			region.x1 = std::min( std::max( region.x1, self->_x1 ), region.w );
+			region.y1 = std::min( std::max( region.y1, self->_y1 ), region.h );
 		}
+		self->_x0 = std::numeric_limits<int>::max();
+		self->_y0 = std::numeric_limits<int>::max();
+		self->_x1 = 0;
+		self->_y1 = 0;
 	}
 
 	static char* _on_password( rfbClient* rfb ) {
@@ -159,15 +172,16 @@ private:
 	void _process( std::string host, int const port, bool lossy ) {
 		while( true ) {
 			rfbClient* const rfb = rfbGetClient( 8, 3, 4 );
-			rfb->MallocFrameBuffer     = _on_resize;
-			rfb->GotFrameBufferUpdate  = _on_update;
-			rfb->GetPassword           = _on_password;
-			rfb->canHandleNewFBSize    = TRUE;
-			rfb->serverHost            = strdup( host.c_str() );
-			rfb->serverPort            = port;
-			rfb->appData.enableJPEG    = lossy ? TRUE : FALSE;
-			rfb->appData.qualityLevel  = 8;
-			rfb->appData.compressLevel = 1;
+			rfb->MallocFrameBuffer         = _on_resize;
+			rfb->GotFrameBufferUpdate      = _on_update;
+			rfb->FinishedFrameBufferUpdate = _on_finish;
+			rfb->GetPassword               = _on_password;
+			rfb->canHandleNewFBSize        = TRUE;
+			rfb->serverHost                = strdup( host.c_str() );
+			rfb->serverPort                = port;
+			rfb->appData.enableJPEG        = lossy ? TRUE : FALSE;
+			rfb->appData.qualityLevel      = 8;
+			rfb->appData.compressLevel     = 1;
 			rfbClientSetClientData( rfb, nullptr, this );
 
 			if( !rfbInitClient( rfb, nullptr, nullptr ) ) {
@@ -183,6 +197,10 @@ private:
 		}
 	}
 
+	int         _x0 = std::numeric_limits<int>::max();
+	int         _y0 = std::numeric_limits<int>::max();
+	int         _x1 = 0;
+	int         _y1 = 0;
 	region_t    _region;
 	std::mutex  _region_mutex;
 	int         _event_pipe[2];
