@@ -18,10 +18,6 @@ struct vnc_layer_t {
 		_thread.run( std::move( host ), port, std::move( password ), lossy );
 	}
 
-	void join() {
-		_thread.join();
-	}
-
 	void update() {
 		vnc_thread_t::region_t const region = _thread.get_update_region();
 		if( region.buf == nullptr ) {
@@ -40,7 +36,7 @@ struct vnc_layer_t {
 			glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 2.0f );
+			//glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 2.0f );
 		}
 		if( region.x0 < region.x1 && region.y0 < region.y1 ) {
 			uint32_t const* const buf = region.buf->data() + region.w * region.y0 + region.x0;
@@ -96,8 +92,8 @@ struct vnc_layer_t {
 		return layer;
 	}
 
-	double        resolution =    0.0f;
-	double        radius     =  100.0f;
+	double        resolution =   0.0f;
+	double        radius     = 100.0f;
 	OVR::Matrix4f transform;
 
 private:

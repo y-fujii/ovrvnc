@@ -38,11 +38,7 @@ struct vnc_thread_t {
 
 	void run( std::string host, int const port, std::string pass, bool lossy ) {
 		_password = std::move( pass );
-		_thread = std::thread( &vnc_thread_t::_process, this, std::move( host ), port, lossy );
-	}
-
-	void join() {
-		_thread.join();
+		std::thread( &vnc_thread_t::_process, this, std::move( host ), port, lossy ).detach();
 	}
 
 	region_t get_update_region() {
@@ -91,11 +87,13 @@ private:
 	static void _on_update( rfbClient* rfb, int x0, int y0, int w, int h ) {
 		auto const self = reinterpret_cast<vnc_thread_t*>( rfbClientGetClientData( rfb, nullptr ) );
 		// XXX
+		/*
 		for( int y = y0; y < y0 + h; ++y ) {
 			for( int x = x0; x < x0 + w; ++x ) {
 				reinterpret_cast<uint32_t*>( rfb->frameBuffer )[rfb->width * y + x] &= 0x00ffffff;
 			}
 		}
+		*/
 		{
 			auto& region = self->_region;
 			std::lock_guard<std::mutex> lock( self->_region_mutex );
@@ -188,6 +186,5 @@ private:
 	region_t    _region;
 	std::mutex  _region_mutex;
 	int         _event_pipe[2];
-	std::thread _thread;
 	std::string _password;
 };

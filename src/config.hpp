@@ -35,7 +35,7 @@ inline config_t config_load( std::string const& fn ) {
 	}
 
 	if( auto const screens = config->get_table_array( "screens" ) ) {
-		config_t::screen_t d;
+		config_t::screen_t const d;
 		for( auto const& screen: *screens ) {
 			result.screens.push_back( {
 				screen->get_as<std::string>( "host" ).value_or( d.host ),
