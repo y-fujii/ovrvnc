@@ -7,6 +7,7 @@ WIP.
 Download link:http://mimosa-pudica.net/tmp/ovrvnc-release.apk[ovrvnc-release.apk] .
 
 ----
+$ adb uninstall net.mimosa_pudica.ovrvnc
 $ adb install ovrvnc-release.apk
 $ vi ovrvnc.toml # configure host, password, etc.  See below.
 $ adb push ovrvnc.toml /sdcard/
