@@ -28,19 +28,6 @@ struct region_t {
 	int y1 = 0;
 };
 
-struct user_password_getter_t: rfb::UserPasswdGetter {
-	inline static thread_local std::string pass;
-
-	user_password_getter_t() {
-		rfb::CSecurity::upg = this;
-		rfb::SecurityClient::setDefaults();
-	}
-
-	virtual void getUserPasswd( bool, char**, char** const pass_ ) override {
-		*pass_ = strdup( pass.c_str() );
-	}
-};
-
 struct pixel_buffer_t: rfb::FullFramePixelBuffer {
     pixel_buffer_t( int const w, int const h ):
 		rfb::FullFramePixelBuffer( { 32, 24, false, true, 255, 255, 255, 0, 8, 16 }, w, h, nullptr, w ),
@@ -66,17 +53,30 @@ private:
 	rfb::Rect _damaged;
 };
 
+struct user_password_getter_t: rfb::UserPasswdGetter {
+	inline static thread_local std::string pass;
+
+	user_password_getter_t() {
+		rfb::CSecurity::upg = this;
+		rfb::SecurityClient::setDefaults();
+	}
+
+	virtual void getUserPasswd( bool, char**, char** const pass_ ) override {
+		*pass_ = strdup( pass.c_str() );
+	}
+};
+
 struct client_connection_t: rfb::CConnection {
 	inline static user_password_getter_t user_password_getter;
 
-	client_connection_t( std::string host, int const port, std::string pass, bool const lossy ):
-		_damaged( INT_MAX, INT_MAX, 0, 0 )
+	client_connection_t( std::string const& host, int const port, std::string pass, bool const lossy ):
+		_damaged( INT_MAX, INT_MAX, 0, 0 ),
+		_socket( host.c_str(), port )
 	{
+		user_password_getter_t::pass = std::move( pass );
 		cp.compressLevel = 1;
 		cp.qualityLevel  = lossy ? 8 : -1;
-		user_password_getter_t::pass = std::move( pass );
-		_socket = std::make_unique<network::TcpSocket>( host.c_str(), port );
-		setStreams( &_socket->inStream(), &_socket->outStream() );
+		setStreams( &_socket.inStream(), &_socket.outStream() );
 		initialiseProtocol();
 	}
 
@@ -104,7 +104,7 @@ struct client_connection_t: rfb::CConnection {
 
 		{
 			std::lock_guard<std::mutex> lock( writer_mutex );
-			writer_mt = writer();
+			writer_mt = std::unique_ptr<rfb::CMsgWriter>( writer() );
 		}
 		setWriter( nullptr );
 	}
@@ -140,7 +140,7 @@ struct client_connection_t: rfb::CConnection {
 	}
 
 	virtual void endOfContinuousUpdates() override {
-		CConnection::endOfContinuousUpdates();
+		CConnection::endOfContinuousUpdates(); // cp.supportsContinuousUpdates = true.
 
 		std::lock_guard<std::mutex> lock( writer_mutex );
 		writer_mt->writeEnableContinuousUpdates( true, 0, 0, cp.width, cp.height );
@@ -176,13 +176,13 @@ struct client_connection_t: rfb::CConnection {
 	virtual void serverCutText( char const*, rdr::U32 ) override {}
 	virtual void setCursor( int, int, const rfb::Point&, rdr::U8 const* ) override {}
 
-	std::mutex                          writer_mutex;
-	rfb::CMsgWriter*                    writer_mt = nullptr;
+	std::mutex                       writer_mutex;
+	std::unique_ptr<rfb::CMsgWriter> writer_mt;
 
 private:
-	std::unique_ptr<network::TcpSocket> _socket;
-	std::mutex                          _damaged_mutex;
-	rfb::Rect                           _damaged;
+	std::mutex                       _damaged_mutex;
+	rfb::Rect                        _damaged;
+	network::TcpSocket               _socket;
 };
 
 struct vnc_thread_t {
