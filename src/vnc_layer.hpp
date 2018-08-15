@@ -19,7 +19,7 @@ struct vnc_layer_t {
 	}
 
 	void update() {
-		vnc_thread_t::region_t const region = _thread.get_update_region();
+		region_t const region = _thread.get_update_region();
 		if( region.buf == nullptr ) {
 			return;
 		}

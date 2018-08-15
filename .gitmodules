@@ -7,3 +7,6 @@
 [submodule "thirdparty/libjpeg-turbo/libjpeg-turbo"]
 	path = thirdparty/libjpeg-turbo/libjpeg-turbo
 	url = https://github.com/libjpeg-turbo/libjpeg-turbo/
+[submodule "thirdparty/tigervnc"]
+	path = thirdparty/tigervnc
+	url = https://github.com/TigerVNC/tigervnc/
