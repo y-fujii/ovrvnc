@@ -101,6 +101,7 @@ struct client_connection_t: rfb::CConnection {
 	virtual void serverInit() override {
 		CConnection::serverInit();
 		writer()->writeSetEncodings( rfb::encodingTight, true );
+		writer()->writeFramebufferUpdateRequest( { 0, 0, cp.width, cp.height }, false );
 
 		{
 			std::lock_guard<std::mutex> lock( writer_mutex );
@@ -112,31 +113,12 @@ struct client_connection_t: rfb::CConnection {
 	// note: also called on serverInit message.
 	virtual void setDesktopSize( int const w, int const h ) override {
 		CConnection::setDesktopSize( w, h );
+		_resize();
+	}
 
-		{
-			std::lock_guard<std::mutex> lock( _damaged_mutex );
-			setFramebuffer( new pixel_buffer_t( w, h ) );
-			_damaged = { INT_MAX, INT_MAX, 0, 0 };
-		}
-
-		if( state() == RFBSTATE_NORMAL ) {
-			if( cp.supportsContinuousUpdates ) {
-				std::lock_guard<std::mutex> lock( writer_mutex );
-				writer_mt->writeEnableContinuousUpdates( true, 0, 0, w, h );
-			}
-			else {
-				std::lock_guard<std::mutex> lock( writer_mutex );
-				writer_mt->writeFramebufferUpdateRequest( { 0, 0, w, h }, true );
-			}
-		}
-		else {
-			if( cp.supportsContinuousUpdates ) {
-				writer()->writeEnableContinuousUpdates( true, 0, 0, w, h );
-			}
-			else {
-				writer()->writeFramebufferUpdateRequest( { 0, 0, w, h }, true );
-			}
-		}
+	virtual void setExtendedDesktopSize( unsigned const reason, unsigned const result, int const w, int const h, rfb::ScreenSet const& layout ) override {
+		CConnection::setExtendedDesktopSize( reason, result, w, h, layout );
+		_resize();
 	}
 
 	virtual void endOfContinuousUpdates() override {
@@ -146,6 +128,15 @@ struct client_connection_t: rfb::CConnection {
 		writer_mt->writeEnableContinuousUpdates( true, 0, 0, cp.width, cp.height );
 	}
 
+	virtual void framebufferUpdateStart() override {
+		CConnection::framebufferUpdateStart();
+
+		if( !cp.supportsContinuousUpdates ) {
+			std::lock_guard<std::mutex> lock( writer_mutex );
+			writer_mt->writeFramebufferUpdateRequest( { 0, 0, cp.width, cp.height }, true );
+		}
+	}
+
 	virtual void framebufferUpdateEnd() override {
 		CConnection::framebufferUpdateEnd();
 
@@ -153,11 +144,6 @@ struct client_connection_t: rfb::CConnection {
 		{
 			std::lock_guard<std::mutex> lock( _damaged_mutex );
 			_damaged = _damaged.union_boundary( new_damaged );
-		}
-
-		if( !cp.supportsContinuousUpdates ) {
-			std::lock_guard<std::mutex> lock( writer_mutex );
-			writer_mt->writeFramebufferUpdateRequest( { 0, 0, cp.width, cp.height }, true );
 		}
 	}
 
@@ -180,9 +166,23 @@ struct client_connection_t: rfb::CConnection {
 	std::unique_ptr<rfb::CMsgWriter> writer_mt;
 
 private:
-	std::mutex                       _damaged_mutex;
-	rfb::Rect                        _damaged;
-	network::TcpSocket               _socket;
+	void _resize() {
+		{
+			std::lock_guard<std::mutex> lock( _damaged_mutex );
+			setFramebuffer( new pixel_buffer_t( cp.width, cp.height ) );
+			_damaged = { INT_MAX, INT_MAX, 0, 0 };
+		}
+
+		if( cp.supportsContinuousUpdates ) {
+			assert( state() == RFBSTATE_NORMAL );
+			std::lock_guard<std::mutex> lock( writer_mutex );
+			writer_mt->writeEnableContinuousUpdates( true, 0, 0, cp.width, cp.height );
+		}
+	}
+
+	std::mutex         _damaged_mutex;
+	rfb::Rect          _damaged;
+	network::TcpSocket _socket;
 };
 
 struct vnc_thread_t {
