@@ -1,0 +1,41 @@
+--- VrAppFramework/Src/GlTexture.cpp
++++ VrAppFramework/Src/GlTexture.cpp
+@@ -27,6 +27,7 @@
+ #include "OVR_PerfTimer.h"
+
+ #include <algorithm>
++#include <cmath>
+
+ #if defined( OVR_OS_ANDROID )
+ #define GL_COMPRESSED_RGBA_ASTC_4x4_KHR   0x93B0
+--- VrApp.gradle
++++ VrApp.gradle
+@@ -316,7 +316,7 @@
+     @TaskAction
+     genDebugKeystore() {
+         if ( !project.file("android.debug.keystore").exists() ) {
+-            def pythonCmd = 'python'
++            def pythonCmd = 'python2'
+             if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                 pythonCmd = "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_keystore.py.bat"
+                 project.exec {
+@@ -355,7 +355,7 @@
+                 buildType
+             }
+         } else {
+-            def pythonCmd = 'python'
++            def pythonCmd = 'python2'
+             project.exec {
+                 commandLine pythonCmd,
+                 "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_sdklibs.py",
+--- Application.mk
++++ Application.mk
+@@ -11,7 +11,7 @@
+ 
+ # Statically link the GNU STL. This may not be safe for multi-so libraries but
+ # we don't know of any problems yet.
+-APP_STL := gnustl_static
++APP_STL := c++_static
+ 
+ # Make sure every shared lib includes a .note.gnu.build-id header, for crash reporting
+ APP_LDFLAGS := -Wl,--build-id

@@ -2,6 +2,10 @@
 
 WIP.
 
+ovrvnc recently switched to TigerVNC as a core library and supports continuous
+updates and asynchronous event sending, which improves throughput and latency
+drastically but might be unstable for now (although it works well on my PC).
+
 == Install prebuilt binary
 
 Download link:http://mimosa-pudica.net/tmp/ovrvnc-release.apk[ovrvnc-release.apk] .
@@ -50,43 +54,7 @@ longitude = 180.0
 
 == Build
 
-XXX
-
-Apply a patch to Oculus mobile SDK:
-----
---- VrAppFramework/Src/GlTexture.cpp
-+++ VrAppFramework/Src/GlTexture.cpp
-@@ -27,6 +27,7 @@
- #include "OVR_PerfTimer.h"
-
- #include <algorithm>
-+#include <cmath>
-
- #if defined( OVR_OS_ANDROID )
- #define GL_COMPRESSED_RGBA_ASTC_4x4_KHR   0x93B0
---- VrApp.gradle
-+++ VrApp.gradle
-@@ -316,7 +316,7 @@
-     @TaskAction
-     genDebugKeystore() {
-         if ( !project.file("android.debug.keystore").exists() ) {
--            def pythonCmd = 'python'
-+            def pythonCmd = 'python2'
-             if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                 pythonCmd = "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_keystore.py.bat"
-                 project.exec {
-@@ -355,7 +355,7 @@
-                 buildType
-             }
-         } else {
--            def pythonCmd = 'python'
-+            def pythonCmd = 'python2'
-             project.exec {
-                 commandLine pythonCmd,
-                 "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_sdklibs.py",
-----
-
-Build:
+XXX: Apply patches.
 ----
 export     ANDROID_HOME=...
 export ANDROID_NDK_HOME=...
