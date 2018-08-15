@@ -17,11 +17,18 @@ $ vi ovrvnc.toml # configure host, password, etc.  See below.
 $ adb push ovrvnc.toml /sdcard/
 ----
 
-For Xorg users, x0vncserver >= 1.9 bundled in TigerVNC with following arguments
-is recommended.
+Note for Xorg users: x0vncserver >= 1.9 bundled in TigerVNC with following
+arguments is recommended.
 ----
 x0vncserver --comparefb=1 --maxprocessorusage=100
 ----
+
+Note for Windows users: UltraVNC does not seem to support continuous updates
+thus slow but I don't know other alternatives (TigerVNC server on Windows seems
+broken).  Using "Poll Full Screen" and "Desktop Duplication" options improves
+the performance (I don't know this configuration is the best).
+
+See also link:http://github.com/y-fujii/mfxvnc/[mfxvnc] .
 
 == Configuration
 
