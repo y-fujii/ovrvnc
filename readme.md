@@ -68,11 +68,11 @@ arguments is recommended.
 
 	x0vncserver --comparefb=1 --maxprocessorusage=100
 
-**For Windows users**: UltraVNC does not seem to support continuous updates
-thus slow but I don't know better alternatives (TigerVNC server on Windows
-seems broken).  Using "Poll Full Screen" and "Desktop Duplication" options
-improves the performance and the stability (I don't know it is the best
-configuration).
+**For Windows users**: I don't know whether TightVNC (!= Tig*er*VNC, it seems
+broken on Windows) or UltraVNC is better.  Note that both of them do not seem
+to support continuous updates thus the performance is not optimal.  When using
+UltraVNC, "Poll Full Screen" and "Desktop Duplication" options improves the
+performance and the stability (I don't know it is the best configuration).
 
 See also [mfxvnc](http://github.com/y-fujii/mfxvnc/).
 
