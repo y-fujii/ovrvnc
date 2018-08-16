@@ -6,6 +6,7 @@
 #include <thread>
 #include <mutex>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <network/TcpSocket.h>
 #include <rfb/Exception.h>
 #include <rfb/CConnection.h>
@@ -70,13 +71,13 @@ struct client_connection_t: rfb::CConnection {
 	inline static user_password_getter_t user_password_getter;
 
 	client_connection_t( std::string const& host, int const port, std::string pass, bool const lossy ):
-		_damaged( INT_MAX, INT_MAX, 0, 0 ),
-		_socket( host.c_str(), port )
+		socket( host.c_str(), port ),
+		_damaged( INT_MAX, INT_MAX, 0, 0 )
 	{
 		user_password_getter_t::pass = std::move( pass );
 		cp.compressLevel = 1;
 		cp.qualityLevel  = lossy ? 8 : -1;
-		setStreams( &_socket.inStream(), &_socket.outStream() );
+		setStreams( &socket.inStream(), &socket.outStream() );
 		initialiseProtocol();
 	}
 
@@ -162,6 +163,7 @@ struct client_connection_t: rfb::CConnection {
 	virtual void serverCutText( char const*, rdr::U32 ) override {}
 	virtual void setCursor( int, int, const rfb::Point&, rdr::U8 const* ) override {}
 
+	network::TcpSocket               socket;
 	std::mutex                       writer_mutex;
 	std::unique_ptr<rfb::CMsgWriter> writer_mt;
 
@@ -183,7 +185,6 @@ private:
 
 	std::mutex         _damaged_mutex;
 	rfb::Rect          _damaged;
-	network::TcpSocket _socket;
 };
 
 struct vnc_thread_t {
@@ -204,11 +205,16 @@ struct vnc_thread_t {
 		if( std::shared_ptr<client_connection_t> c = _connection ) {
 			std::lock_guard<std::mutex> lock( c->writer_mutex );
 			if( c->writer_mt != nullptr ) {
+				int remaining = 0;
+				if( ioctl( c->socket.getFd(), TIOCOUTQ, &remaining ) < 0 || remaining >= 2048 ) {
+					__android_log_print( ANDROID_LOG_INFO, "ovrvnc", "ioctl()" );
+					return;
+				}
 				try {
 					c->writer_mt->writePointerEvent( { x, y }, (b0 ? 1 : 0) | (b1 ? 4 : 0) );
 				}
 				catch( rfb::Exception const& e ) {
-					__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "%s", e.str() );
+					__android_log_print( ANDROID_LOG_INFO, "ovrvnc", "%s", e.str() );
 				}
 			}
 		}
@@ -224,7 +230,7 @@ private:
 				}
 			}
 			catch( rfb::Exception const& e ) {
-				__android_log_print( ANDROID_LOG_ERROR, "ovrvnc", "%s", e.str() );
+				__android_log_print( ANDROID_LOG_INFO, "ovrvnc", "%s", e.str() );
 			}
 
 			_connection = nullptr;

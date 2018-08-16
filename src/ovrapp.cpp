@@ -69,7 +69,7 @@ struct application_t: OVR::VrAppInterface {
 		/* projection layer (currently unused). */ {
 			ovrLayerProjection2& layer = res.Layers[res.LayerCount++].Projection;
 			layer = vrapi_DefaultLayerProjection2();
-			layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+			//layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
 			layer.HeadPose = frame.Tracking.HeadPose;
 			for( size_t eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; ++eye ) {
 				layer.Textures[eye].ColorSwapChain         = frame.ColorTextureSwapChain[eye];
