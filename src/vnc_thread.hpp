@@ -168,8 +168,9 @@ struct client_connection_t: rfb::CConnection {
 private:
 	void _resize() {
 		{
+			auto pb = std::make_unique<pixel_buffer_t>( cp.width, cp.height );
 			std::lock_guard<std::mutex> lock( _damaged_mutex );
-			setFramebuffer( new pixel_buffer_t( cp.width, cp.height ) );
+			setFramebuffer( pb.release() );
 			_damaged = { INT_MAX, INT_MAX, 0, 0 };
 		}
 

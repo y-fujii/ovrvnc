@@ -60,7 +60,7 @@ Although RFB protocol is old, I think it is still a simple and good protocol.
 With Tight encoding and Continuous update extensions, you can watch the HD
 video through the VNC without any hardware encoder.
 
-The latency and throughput of ovrvnc is heavily depends on a server program and
+The latency and throughput of ovrvnc heavily depends on a server program and
 its configuration.  In many cases, the bottleneck is a CPU, not a network.
 
 **For Xorg users**: x0vncserver >= 1.9 bundled in TigerVNC with following
