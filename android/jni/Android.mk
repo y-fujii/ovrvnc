@@ -38,7 +38,6 @@ LOCAL_SRC_FILES := \
 	$(TIGERVNC_PATH)/rfb/Decoder.cxx \
 	$(TIGERVNC_PATH)/rfb/HextileDecoder.cxx \
 	$(TIGERVNC_PATH)/rfb/JpegDecompressor.cxx \
-	$(TIGERVNC_PATH)/rfb/KeyRemapper.cxx \
 	$(TIGERVNC_PATH)/rfb/LogWriter.cxx \
 	$(TIGERVNC_PATH)/rfb/Logger.cxx \
 	$(TIGERVNC_PATH)/rfb/Password.cxx \
@@ -49,11 +48,8 @@ LOCAL_SRC_FILES := \
 	$(TIGERVNC_PATH)/rfb/Region.cxx \
 	$(TIGERVNC_PATH)/rfb/Security.cxx \
 	$(TIGERVNC_PATH)/rfb/SecurityClient.cxx \
-	$(TIGERVNC_PATH)/rfb/ScaleFilters.cxx \
-	$(TIGERVNC_PATH)/rfb/Timer.cxx \
 	$(TIGERVNC_PATH)/rfb/TightDecoder.cxx \
 	$(TIGERVNC_PATH)/rfb/ZRLEDecoder.cxx \
-	$(TIGERVNC_PATH)/rfb/encodings.cxx \
 	$(TIGERVNC_PATH)/rfb/util.cxx
 
 LOCAL_STATIC_LIBRARIES := vrmodel vrappframework libovrkernel
