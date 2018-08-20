@@ -30,7 +30,7 @@ struct region_t {
 };
 
 struct pixel_buffer_t: rfb::FullFramePixelBuffer {
-    pixel_buffer_t( int const w, int const h ):
+	pixel_buffer_t( int const w, int const h ):
 		rfb::FullFramePixelBuffer( { 32, 24, false, true, 255, 255, 255, 0, 8, 16 }, w, h, nullptr, w ),
 		_damaged( INT_MAX, INT_MAX, 0, 0 )
 	{
@@ -154,7 +154,7 @@ struct client_connection_t: rfb::CConnection {
 
 		if( flags & rfb::fenceFlagRequest ) {
 			std::lock_guard<std::mutex> lock( writer_mutex );
-			writer_mt->writeFence( 0, len, data );
+			writer_mt->writeFence( flags & ~rfb::fenceFlagRequest, len, data );
 		}
 	}
 
@@ -183,8 +183,8 @@ private:
 		}
 	}
 
-	std::mutex         _damaged_mutex;
-	rfb::Rect          _damaged;
+	std::mutex _damaged_mutex;
+	rfb::Rect  _damaged;
 };
 
 struct vnc_thread_t {
