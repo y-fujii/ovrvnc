@@ -188,8 +188,14 @@ private:
 };
 
 struct vnc_thread_t {
+	vnc_thread_t()                                 = default;
+	vnc_thread_t( vnc_thread_t&& )                 = delete;
+	vnc_thread_t( vnc_thread_t const& )            = delete;
+	vnc_thread_t& operator=( vnc_thread_t&& )      = delete;
+	vnc_thread_t& operator=( vnc_thread_t const& ) = delete;
+
 	region_t get_update_region() {
-		if( std::shared_ptr<client_connection_t> c = _connection ) {
+		if( auto const c = std::atomic_load( &_connection ) ) {
 			return c->get_update_region();
 		}
 		else {
@@ -202,7 +208,7 @@ struct vnc_thread_t {
 	}
 
 	void push_mouse_event( uint16_t const x, uint16_t const y, bool const b0, bool const b1 ) {
-		if( std::shared_ptr<client_connection_t> c = _connection ) {
+		if( auto const c = std::atomic_load( &_connection ) ) {
 			std::lock_guard<std::mutex> lock( c->writer_mutex );
 			if( c->writer_mt != nullptr ) {
 				int remaining = 0;
@@ -224,7 +230,7 @@ private:
 	void _process( std::string const host, int const port, std::string const pass, bool const lossy ) {
 		while( true ) {
 			try {
-				_connection = std::make_shared<client_connection_t>( host, port, pass, lossy );
+				std::atomic_store( &_connection, std::make_shared<client_connection_t>( host, port, pass, lossy ) );
 				while( true ) {
 					_connection->processMsg();
 				}
@@ -233,7 +239,7 @@ private:
 				__android_log_print( ANDROID_LOG_INFO, "ovrvnc", "%s", e.str() );
 			}
 
-			_connection = nullptr;
+			std::atomic_store( &_connection, {} );
 			sleep( 1 );
 		}
 	}
