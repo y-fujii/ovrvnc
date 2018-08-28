@@ -46,14 +46,13 @@ More complex example:
 	latitude  = -15.0
 	#longitude = 0.0
 	#lossy = true
+	use_pointer = false
 
 	[[screens]]
 	host = "192.168.179.4"
-	#port = 5900
 	password = "hogehoge"
 	latitude  = -15.0
 	longitude = 180.0
-	#lossy = true
 
 ## Performance
 

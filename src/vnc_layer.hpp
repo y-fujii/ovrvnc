@@ -51,6 +51,10 @@ struct vnc_layer_t {
 	}
 
 	void handle_pointer( ovrTracking const& tracking, uint32_t const buttons ) {
+		if( !use_pointer ) {
+			return;
+		}
+
 		OVR::Matrix4f const m = transform.Inverted() * ovrMatrix4f_CreateFromQuaternion( &tracking.HeadPose.Pose.Orientation );
 		float const x = m.M[0][2];
 		float const y = m.M[1][2];
@@ -92,9 +96,10 @@ struct vnc_layer_t {
 		return layer;
 	}
 
-	double        resolution =   0.0f;
-	double        radius     = 100.0f;
+	double        resolution  =   0.0f;
+	double        radius      = 100.0f;
 	OVR::Matrix4f transform;
+	bool          use_pointer = true;
 
 private:
 	std::unique_ptr<ovrTextureSwapChain> _screen;

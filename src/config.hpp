@@ -10,11 +10,12 @@
 struct config_t {
 	struct screen_t {
 		std::string host;
-		int         port      = 5900;
+		int         port        = 5900;
 		std::string password;
-		float       latitude  = 0.0f;
-		float       longitude = 0.0f;
-		bool        lossy     = true;
+		float       latitude    = 0.0f;
+		float       longitude   = 0.0f;
+		bool        lossy       = true;
+		bool        use_pointer = true;
 	};
 
 	float                 resolution  = 2560.0f;
@@ -43,7 +44,8 @@ inline config_t config_load( std::string const& fn ) {
 				screen->get_as<std::string>( "password" ).value_or( d.password ),
 				float( screen->get_as<double>( "latitude"  ).value_or( d.latitude ) ),
 				float( screen->get_as<double>( "longitude" ).value_or( d.longitude ) ),
-				screen->get_as<bool>( "lossy" ).value_or( d.lossy )
+				screen->get_as<bool>( "lossy" ).value_or( d.lossy ),
+				screen->get_as<bool>( "use_pointer" ).value_or( d.use_pointer )
 			} );
 		}
 	}
