@@ -195,8 +195,8 @@ struct vnc_thread_t {
 	vnc_thread_t& operator=( vnc_thread_t const& ) = delete;
 
 	region_t get_update_region() {
-		if( auto const c = std::atomic_load( &_connection ) ) {
-			return c->get_update_region();
+		if( auto const conn = std::atomic_load( &_connection ) ) {
+			return conn->get_update_region();
 		}
 		else {
 			return {};
@@ -208,20 +208,18 @@ struct vnc_thread_t {
 	}
 
 	void push_mouse_event( uint16_t const x, uint16_t const y, bool const b0, bool const b1 ) {
-		if( auto const c = std::atomic_load( &_connection ) ) {
-			std::lock_guard<std::mutex> lock( c->writer_mutex );
-			if( c->writer_mt != nullptr ) {
-				int remaining = 0;
-				if( ioctl( c->socket.getFd(), TIOCOUTQ, &remaining ) < 0 || remaining >= 2048 ) {
-					__android_log_print( ANDROID_LOG_INFO, "ovrvnc", "ioctl()" );
-					return;
-				}
-				try {
-					c->writer_mt->writePointerEvent( { x, y }, (b0 ? 1 : 0) | (b1 ? 4 : 0) );
-				}
-				catch( rfb::Exception const& e ) {
-					__android_log_print( ANDROID_LOG_INFO, "ovrvnc", "%s", e.str() );
-				}
+		if( auto const conn = std::atomic_load( &_connection ) ) {
+			std::lock_guard<std::mutex> lock( conn->writer_mutex );
+			int remaining = 0;
+			if( ioctl( conn->socket.getFd(), TIOCOUTQ, &remaining ) < 0 || remaining >= 2048 ) {
+				__android_log_print( ANDROID_LOG_INFO, "ovrvnc", "ioctl()" );
+				return;
+			}
+			try {
+				conn->writer_mt->writePointerEvent( { x, y }, (b0 ? 1 : 0) | (b1 ? 4 : 0) );
+			}
+			catch( rfb::Exception const& e ) {
+				__android_log_print( ANDROID_LOG_INFO, "ovrvnc", "%s", e.str() );
 			}
 		}
 	}
@@ -230,9 +228,14 @@ private:
 	void _process( std::string const host, int const port, std::string const pass, bool const lossy ) {
 		while( true ) {
 			try {
-				std::atomic_store( &_connection, std::make_shared<client_connection_t>( host, port, pass, lossy ) );
+				auto const conn = std::make_shared<client_connection_t>( host, port, pass, lossy );
+				while( conn->state() != client_connection_t::RFBSTATE_NORMAL ) {
+					conn->processMsg();
+				}
+				assert( conn->writer_mt != nullptr );
+				std::atomic_store( &_connection, conn );
 				while( true ) {
-					_connection->processMsg();
+					conn->processMsg();
 				}
 			}
 			catch( rfb::Exception const& e ) {
