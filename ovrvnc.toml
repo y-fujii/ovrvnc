@@ -1,4 +1,6 @@
-#color_bg = [0.0, 0.0, 0.0]
+[background]
+#color = [0.0, 0.0, 0.0]
+image = "/sdcard/Pictures/equirect.jpg"
 
 [[screens]]
 host = "192.168.179.5"
@@ -9,8 +11,8 @@ latitude  = -15.0
 #lossy = true
 use_pointer = false
 
-[[screens]]
-host = "192.168.179.4"
-password = "hogehoge"
-latitude  = -15.0
-longitude = 180.0
+#[[screens]]
+#host = "192.168.179.4"
+#password = "hogehoge"
+#latitude  = -15.0
+#longitude = 180.0

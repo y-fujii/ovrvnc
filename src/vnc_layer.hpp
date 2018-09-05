@@ -26,9 +26,9 @@ struct vnc_layer_t {
 		if( _screen_w != region.w || _screen_h != region.h ) {
 			_screen_w = region.w;
 			_screen_h = region.h;
-			_screen = std::unique_ptr<ovrTextureSwapChain>(
-				vrapi_CreateTextureSwapChain( VRAPI_TEXTURE_TYPE_2D, VRAPI_TEXTURE_FORMAT_8888_sRGB, region.w, region.h, 1, false )
-			);
+			_screen = std::unique_ptr<ovrTextureSwapChain>( vrapi_CreateTextureSwapChain3(
+				VRAPI_TEXTURE_TYPE_2D, GL_SRGB8_ALPHA8, region.w, region.h, 1, 1
+			) );
 			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen.get(), 0 ) );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
@@ -75,7 +75,7 @@ struct vnc_layer_t {
 		}
 	}
 
-	std::optional<ovrLayerCylinder2> layer( OVR::ovrFrameInput const& frame ) const {
+	std::optional<ovrLayerCylinder2> layer( ovrTracking2 const& tracking ) const {
 		if( _screen == nullptr ) {
 			return std::nullopt;
 		}
@@ -89,12 +89,12 @@ struct vnc_layer_t {
 		layer.Header.SrcBlend = VRAPI_FRAME_LAYER_BLEND_ONE;
 		layer.Header.DstBlend = VRAPI_FRAME_LAYER_BLEND_SRC_ALPHA;
 		layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
-		layer.HeadPose = frame.Tracking.HeadPose;
+		layer.HeadPose = tracking.HeadPose;
 		for( size_t eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; ++eye ) {
 			layer.Textures[eye].ColorSwapChain = _screen.get();
 			layer.Textures[eye].SwapChainIndex = 0;
 
-			layer.Textures[eye].TexCoordsFromTanAngles = (OVR::Matrix4f( frame.Tracking.Eye[eye].ViewMatrix ) * m_m).Inverted();
+			layer.Textures[eye].TexCoordsFromTanAngles = (OVR::Matrix4f( tracking.Eye[eye].ViewMatrix ) * m_m).Inverted();
 			layer.Textures[eye].TextureMatrix.M[0][0] = sx;
 			layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * sx + 0.5f;
 		}

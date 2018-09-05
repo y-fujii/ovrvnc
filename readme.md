@@ -8,8 +8,8 @@ ovrvnc is a simple VNC client for Oculus Go.
 - Latency
 	- Decoding, rendering and sending input events are all asynchronous.
 - Visual
-	- Use cylindrical layers with optimal resolution, chromatic aberration
-	  correction and 72Hz refresh rate.
+	- Use cylindrical layers with optimal resolution, sRGB gamma-corrected
+	  interpolation, chromatic aberration correction and 72Hz refresh rate.
 - Support multiple connection.
 - Customize with configuration file.
 
@@ -37,7 +37,9 @@ Minimal example of `/sdcard/ovrvnc.toml`:
 
 More complex example:
 
-	#color_bg = [0.0, 0.0, 0.0]
+	[background]
+	#color = [0.0, 0.0, 0.0]
+	image = "/sdcard/Pictures/equirect.jpg"
 
 	[[screens]]
 	host = "192.168.179.5"

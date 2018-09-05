@@ -19,19 +19,25 @@ struct config_t {
 	};
 
 	float                 resolution  = 2560.0f;
-	float                 color_bg[3] = { 0.0f, 0.0f, 0.0f };
 	std::vector<screen_t> screens;
+	float                 bg_color[3] = { 0.0f, 0.0f, 0.0f };
+	std::string           bg_image;
 };
 
 inline config_t config_load( std::string const& fn ) {
 	config_t result;
 	auto config = cpptoml::parse_file( fn );
 
-	if( auto const color_bg = config->get_array_of<double>( "color_bg" ) ) {
-		if( color_bg->size() == 3 ) {
-			result.color_bg[0] = float( color_bg->at( 0 ) );
-			result.color_bg[1] = float( color_bg->at( 1 ) );
-			result.color_bg[2] = float( color_bg->at( 2 ) );
+	if( auto const bg = config->get_table( "background" ) ) {
+		if( auto const color = bg->get_array_of<double>( "color" ) ) {
+			if( color->size() == 3 ) {
+				result.bg_color[0] = float( color->at( 0 ) );
+				result.bg_color[1] = float( color->at( 1 ) );
+				result.bg_color[2] = float( color->at( 2 ) );
+			}
+		}
+		if( auto img = bg->get_as<std::string>( "image" ) ) {
+			result.bg_image = std::move( *img );
 		}
 	}
 
