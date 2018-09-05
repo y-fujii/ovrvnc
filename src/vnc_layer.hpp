@@ -61,12 +61,17 @@ struct vnc_layer_t {
 		float const z = m.M[2][2];
 		float const u = std::atan2( x, z );
 		float const v = y / std::hypot( x, z );
-		int const iu = int( std::floor( float( -resolution / M_PI ) * u + 0.5f * float( _screen_w ) ) );
-		int const iv = int( std::floor( float( +resolution / M_PI ) * v + 0.5f * float( _screen_h ) ) );
+		int iu = int( std::floor( float( -resolution / M_PI ) * u + 0.5f * float( _screen_w ) ) );
+		int iv = int( std::floor( float( +resolution / M_PI ) * v + 0.5f * float( _screen_h ) ) );
+		if( _capturing ) {
+			iu = std::min( std::max( iu, 0 ), _screen_w - 1 );
+			iv = std::min( std::max( iv, 0 ), _screen_h - 1 );
+		}
 		if( 0 <= iu && iu < _screen_w && 0 <= iv && iv < _screen_h ) {
 			bool button_0 = (buttons & ovrButton_A    ) != 0;
 			bool button_1 = (buttons & ovrButton_Enter) != 0;
 			_thread.push_mouse_event( iu, iv, button_0, button_1 );
+			_capturing = button_0 || button_1;
 		}
 	}
 
@@ -75,7 +80,7 @@ struct vnc_layer_t {
 			return std::nullopt;
 		}
 
-		// the shape of cylinder is hard-coded to 180 deg around and 60 deg vertical FOV in SDK.
+		// the shape of cylinder is hard-coded in SDK: 180 deg around, 60 deg vertical FOV.
 		float const sx = resolution / float( _screen_w );
 		float const fy = float( std::sqrt( 3.0 ) * M_PI / 2.0 ) * float( _screen_h ) / resolution;
 		OVR::Matrix4f const m_m = transform * OVR::Matrix4f::Scaling( radius, radius * fy, radius );
@@ -106,4 +111,5 @@ private:
 	int                                  _screen_w = 0;
 	int                                  _screen_h = 0;
 	vnc_thread_t                         _thread;
+	bool                                 _capturing = false;
 };
