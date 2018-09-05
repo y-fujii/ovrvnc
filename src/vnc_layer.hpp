@@ -101,8 +101,8 @@ struct vnc_layer_t {
 		return layer;
 	}
 
-	double        resolution  =   0.0f;
-	double        radius      = 100.0f;
+	double        resolution  =  0.0;
+	double        radius      = 10.0;
 	OVR::Matrix4f transform;
 	bool          use_pointer = true;
 
