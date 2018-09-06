@@ -342,36 +342,163 @@ index 5a40379a..c9de81ed 100644
  }
  
 diff --git a/common/rfb/TightDecoder.cxx b/common/rfb/TightDecoder.cxx
-index cc786f5b..96890e02 100644
+index cc786f5b..285836d8 100644
 --- a/common/rfb/TightDecoder.cxx
 +++ b/common/rfb/TightDecoder.cxx
-@@ -321,7 +321,6 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+@@ -200,6 +200,7 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+     }
+     comp_ctl >>= 1;
+   }
++  int streamId = comp_ctl & 0x03;
+ 
+   // "Fill" compression type.
+   if (comp_ctl == tightFill) {
+@@ -299,9 +300,6 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+ 
+   // Determine if the data should be decompressed or just copied.
+   size_t rowSize, dataSize;
+-  rdr::U8* netbuf;
+-
+-  netbuf = NULL;
+ 
+   if (palSize != 0) {
+     if (palSize <= 2)
+@@ -320,8 +318,6 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+     assert(buflen >= dataSize);
    else {
      rdr::U32 len;
-     int streamId;
+-    int streamId;
 -    rdr::MemInStream* ms;
  
      assert(buflen >= 4);
  
-@@ -332,8 +331,8 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+@@ -331,26 +327,24 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+ 
      assert(buflen >= len);
  
-     streamId = comp_ctl & 0x03;
+-    streamId = comp_ctl & 0x03;
 -    ms = new rdr::MemInStream(bufptr, len);
 -    zis[streamId].setUnderlying(ms, len);
 +    rdr::MemInStream ms(bufptr, len);
 +    zis[streamId].setUnderlying(&ms, len);
  
      // Allocate buffer and decompress the data
-     netbuf = new rdr::U8[dataSize];
-@@ -341,7 +340,6 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
-     zis[streamId].readBytes(netbuf, dataSize);
+-    netbuf = new rdr::U8[dataSize];
++    netbuf[streamId].resize(dataSize);
+ 
+-    zis[streamId].readBytes(netbuf, dataSize);
++    zis[streamId].readBytes(netbuf[streamId].data(), dataSize);
  
      zis[streamId].removeUnderlying();
 -    delete ms;
  
-     bufptr = netbuf;
+-    bufptr = netbuf;
++    bufptr = netbuf[streamId].data();
      buflen = dataSize;
+   }
+ 
+   // Time to decode the actual data
+   bool directDecode;
+ 
+-  rdr::U8* outbuf;
++  rdr::U8* outptr;
+   int stride;
+ 
+   if (pb->getPF().equal(pf)) {
+@@ -362,9 +356,10 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+   }
+ 
+   if (directDecode)
+-    outbuf = pb->getBufferRW(r, &stride);
++    outptr = pb->getBufferRW(r, &stride);
+   else {
+-    outbuf = new rdr::U8[r.area() * (pf.bpp/8)];
++    outbuf[streamId].resize(r.area() * (pf.bpp/8));
++    outptr = outbuf[streamId].data();
+     stride = r.width();
+   }
+ 
+@@ -372,23 +367,23 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+     // Truecolor data
+     if (useGradient) {
+       if (pf.is888())
+-        FilterGradient24(bufptr, pf, (rdr::U32*)outbuf, stride, r);
++        FilterGradient24(bufptr, pf, (rdr::U32*)outptr, stride, r);
+       else {
+         switch (pf.bpp) {
+         case 8:
+           assert(false);
+           break;
+         case 16:
+-          FilterGradient(bufptr, pf, (rdr::U16*)outbuf, stride, r);
++          FilterGradient(bufptr, pf, (rdr::U16*)outptr, stride, r);
+           break;
+         case 32:
+-          FilterGradient(bufptr, pf, (rdr::U32*)outbuf, stride, r);
++          FilterGradient(bufptr, pf, (rdr::U32*)outptr, stride, r);
+           break;
+         }
+       }
+     } else {
+       // Copy
+-      rdr::U8* ptr = outbuf;
++      rdr::U8* ptr = outptr;
+       const rdr::U8* srcPtr = bufptr;
+       int w = r.width();
+       int h = r.height();
+@@ -413,15 +408,15 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+     switch (pf.bpp) {
+     case 8:
+       FilterPalette((const rdr::U8*)palette, palSize,
+-                    bufptr, (rdr::U8*)outbuf, stride, r);
++                    bufptr, (rdr::U8*)outptr, stride, r);
+       break;
+     case 16:
+       FilterPalette((const rdr::U16*)palette, palSize,
+-                    bufptr, (rdr::U16*)outbuf, stride, r);
++                    bufptr, (rdr::U16*)outptr, stride, r);
+       break;
+     case 32:
+       FilterPalette((const rdr::U32*)palette, palSize,
+-                    bufptr, (rdr::U32*)outbuf, stride, r);
++                    bufptr, (rdr::U32*)outptr, stride, r);
+       break;
+     }
+   }
+@@ -429,11 +424,8 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
+   if (directDecode)
+     pb->commitBufferRW(r);
+   else {
+-    pb->imageRect(pf, r, outbuf);
+-    delete [] outbuf;
++    pb->imageRect(pf, r, outptr);
+   }
+-
+-  delete [] netbuf;
+ }
+ 
+ rdr::U32 TightDecoder::readCompact(rdr::InStream* is)
+diff --git a/common/rfb/TightDecoder.h b/common/rfb/TightDecoder.h
+index 6eb93d2a..53b57a90 100644
+--- a/common/rfb/TightDecoder.h
++++ b/common/rfb/TightDecoder.h
+@@ -20,6 +20,7 @@
+ #ifndef __RFB_TIGHTDECODER_H__
+ #define __RFB_TIGHTDECODER_H__
+ 
++#include <vector>
+ #include <rdr/ZlibInStream.h>
+ #include <rfb/Decoder.h>
+ #include <rfb/JpegDecompressor.h>
+@@ -67,6 +68,8 @@ namespace rfb {
+ 
+   private:
+     rdr::ZlibInStream zis[4];
++    std::vector<rdr::U8> netbuf[4];
++    std::vector<rdr::U8> outbuf[4];
+   };
+ }
+ 
 diff --git a/common/rfb/tightDecode.h b/common/rfb/tightDecode.h
 index b6e86ed5..56a56c34 100644
 --- a/common/rfb/tightDecode.h
