@@ -39,25 +39,35 @@ struct pixel_buffer_t: rfb::FullFramePixelBuffer {
 	}
 
 	virtual void commitBufferRW( rfb::Rect const& rect ) override {
+		FullFramePixelBuffer::commitBufferRW( rect );
+
+		// XXX
 		uint32_t* buf = buffer->data();
 		for( ssize_t y = rect.tl.y; y < rect.br.y; ++y ) {
 			for( ssize_t x = rect.tl.x; x < rect.br.x; ++x ) {
 				buf[x + y * width()] &= 0x00ffffff;
 			}
 		}
-		_damaged = _damaged.union_boundary( rect );
+		{
+			std::lock_guard<std::mutex> lock( _damaged_mutex );
+			_damaged = _damaged.union_boundary( rect );
+		}
 	}
 
 	rfb::Rect damaged() {
 		rfb::Rect tmp( INT_MAX, INT_MAX, 0, 0 );
-		swap( tmp, _damaged );
+		{
+			std::lock_guard<std::mutex> lock( _damaged_mutex );
+			swap( tmp, _damaged );
+		}
 		return tmp;
 	}
 
 	std::shared_ptr<std::vector<uint32_t>> buffer;
 
 private:
-	rfb::Rect _damaged;
+	rfb::Rect  _damaged;
+	std::mutex _damaged_mutex;
 };
 
 struct user_password_getter_t: rfb::UserPasswdGetter {
