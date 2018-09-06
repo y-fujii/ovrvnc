@@ -56,6 +56,8 @@ More complex example:
 	latitude  = -15.0
 	longitude = 180.0
 
+Note that using background image causes flickering.  It will be fixed soon.
+
 ## Performance
 
 Although RFB protocol is old, I think it is still a simple and good protocol.
