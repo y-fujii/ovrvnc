@@ -38,6 +38,7 @@ struct application_t: OVR::VrAppInterface {
 			for( auto const& screen: _config.screens ) {
 				auto vnc = std::make_unique<vnc_layer_t>();
 				vnc->resolution = _config.resolution;
+				vnc->radius = screen.radius;
 				vnc->transform =
 					OVR::Matrix4f::RotationY( float( M_PI / 180.0 ) * screen.longitude ) *
 					OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * screen.latitude  );
