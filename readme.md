@@ -47,6 +47,7 @@ More complex example:
 	#password = ""
 	latitude  = -15.0
 	#longitude = 0.0
+	radius  = 1.5
 	#lossy = true
 	use_pointer = false
 
