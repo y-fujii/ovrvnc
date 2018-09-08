@@ -83,7 +83,7 @@ struct vnc_layer_t {
 		// the shape of cylinder is hard-coded in SDK: 180 deg around, 60 deg vertical FOV.
 		float const sx = resolution / float( _screen_w );
 		float const fy = float( std::sqrt( 3.0 ) * M_PI / 2.0 ) * float( _screen_h ) / resolution;
-		OVR::Matrix4f const m_m = transform * OVR::Matrix4f::Scaling( radius, radius * fy, radius );
+		OVR::Matrix4f const m_m = transform * OVR::Matrix4f::Scaling( radius, fy, radius );
 
 		ovrLayerCylinder2 layer = vrapi_DefaultLayerCylinder2();
 		layer.Header.SrcBlend = VRAPI_FRAME_LAYER_BLEND_ONE;
@@ -95,14 +95,14 @@ struct vnc_layer_t {
 			layer.Textures[eye].SwapChainIndex = 0;
 
 			layer.Textures[eye].TexCoordsFromTanAngles = (OVR::Matrix4f( tracking.Eye[eye].ViewMatrix ) * m_m).Inverted();
-			layer.Textures[eye].TextureMatrix.M[0][0] = sx;
-			layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * sx + 0.5f;
+			layer.Textures[eye].TextureMatrix.M[0][0] = sx * radius;
+			layer.Textures[eye].TextureMatrix.M[0][2] = -0.5f * (sx * radius) + 0.5f;
 		}
 		return layer;
 	}
 
-	double        resolution  =  0.0;
-	double        radius      = 10.0;
+	double        resolution  = 0.0;
+	double        radius      = 1.0;
 	OVR::Matrix4f transform;
 	bool          use_pointer = true;
 
