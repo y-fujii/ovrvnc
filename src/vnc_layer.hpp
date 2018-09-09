@@ -14,6 +14,13 @@ namespace std {
 }
 
 struct vnc_layer_t {
+	~vnc_layer_t() {
+		// XXX: GL context.
+		if( glDeleteFramebuffers != nullptr ) {
+			glDeleteFramebuffers( 1, &_screen_fbo );
+		}
+	}
+
 	void run( std::string host, int const port, std::string password, bool lossy ) {
 		_thread.run( std::move( host ), port, std::move( password ), lossy );
 	}
@@ -23,13 +30,18 @@ struct vnc_layer_t {
 		if( region.buf == nullptr ) {
 			return;
 		}
+
+		if( _screen_fbo == 0 ) {
+			glGenFramebuffers( 1, &_screen_fbo );
+		}
 		if( _screen_w != region.w || _screen_h != region.h ) {
 			_screen_w = region.w;
 			_screen_h = region.h;
 			_screen = std::unique_ptr<ovrTextureSwapChain>( vrapi_CreateTextureSwapChain3(
 				VRAPI_TEXTURE_TYPE_2D, GL_SRGB8_ALPHA8, region.w, region.h, 1, 1
 			) );
-			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen.get(), 0 ) );
+			unsigned tex = vrapi_GetTextureSwapChainHandle( _screen.get(), 0 );
+			glBindTexture( GL_TEXTURE_2D, tex );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
 			GLfloat borderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -37,6 +49,9 @@ struct vnc_layer_t {
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 			//glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 2.0f );
+
+			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, _screen_fbo );
+			glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0 );
 		}
 		if( region.x0 < region.x1 && region.y0 < region.y1 ) {
 			uint32_t const* const buf = region.buf->data() + region.w * region.y0 + region.x0;
@@ -46,7 +61,15 @@ struct vnc_layer_t {
 			glPixelStorei( GL_UNPACK_ROW_LENGTH, region.w );
 			glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _screen.get(), 0 ) );
 			glTexSubImage2D( GL_TEXTURE_2D, 0, region.x0, region.y0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buf );
+
+			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, _screen_fbo );
+			glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
+			glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE );
+			glClear( GL_COLOR_BUFFER_BIT );
+			glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
 		}
+
+		glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
 		glBindTexture( GL_TEXTURE_2D, 0 );
 	}
 
@@ -108,8 +131,9 @@ struct vnc_layer_t {
 
 private:
 	std::unique_ptr<ovrTextureSwapChain> _screen;
-	int                                  _screen_w = 0;
-	int                                  _screen_h = 0;
+	int                                  _screen_w   = 0;
+	int                                  _screen_h   = 0;
+	unsigned                             _screen_fbo = 0;
 	vnc_thread_t                         _thread;
 	bool                                 _capturing = false;
 };

@@ -41,17 +41,8 @@ struct pixel_buffer_t: rfb::FullFramePixelBuffer {
 	virtual void commitBufferRW( rfb::Rect const& rect ) override {
 		FullFramePixelBuffer::commitBufferRW( rect );
 
-		// XXX
-		uint32_t* buf = buffer->data();
-		for( ssize_t y = rect.tl.y; y < rect.br.y; ++y ) {
-			for( ssize_t x = rect.tl.x; x < rect.br.x; ++x ) {
-				buf[x + y * width()] &= 0x00ffffff;
-			}
-		}
-		{
-			std::lock_guard<std::mutex> lock( _damaged_mutex );
-			_damaged = _damaged.union_boundary( rect );
-		}
+		std::lock_guard<std::mutex> lock( _damaged_mutex );
+		_damaged = _damaged.union_boundary( rect );
 	}
 
 	rfb::Rect damaged() {
