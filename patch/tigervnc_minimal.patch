@@ -1,0 +1,21 @@
+diff --git a/common/os/Thread.cxx b/common/os/Thread.cxx
+index 2b08dbf9..09687a85 100644
+--- a/common/os/Thread.cxx
++++ b/common/os/Thread.cxx
+@@ -19,6 +19,7 @@
+ #ifdef WIN32
+ #include <windows.h>
+ #else
++#include <stdlib.h>
+ #include <pthread.h>
+ #include <signal.h>
+ #include <unistd.h>
+@@ -48,7 +49,7 @@ Thread::~Thread()
+   delete (HANDLE*)threadId;
+ #else
+   if (isRunning())
+-    pthread_cancel(*(pthread_t*)threadId);
++    abort();
+   delete (pthread_t*)threadId;
+ #endif
+ 
