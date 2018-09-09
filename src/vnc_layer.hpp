@@ -106,7 +106,7 @@ struct vnc_layer_t {
 		// the shape of cylinder is hard-coded in SDK: 180 deg around, 60 deg vertical FOV.
 		float const sx = resolution / float( _screen_w );
 		float const fy = float( std::sqrt( 3.0 ) * M_PI / 2.0 ) * float( _screen_h ) / resolution;
-		OVR::Matrix4f const m_m = transform * OVR::Matrix4f::Scaling( radius, radius * fy, radius );
+		OVR::Matrix4f const m_m = transform * OVR::Matrix4f::Scaling( 1.0f, fy, 1.0f );
 
 		ovrLayerCylinder2 layer = vrapi_DefaultLayerCylinder2();
 		layer.Header.SrcBlend = VRAPI_FRAME_LAYER_BLEND_ONE;
@@ -125,7 +125,6 @@ struct vnc_layer_t {
 	}
 
 	double        resolution  =  0.0;
-	double        radius      = 10.0;
 	OVR::Matrix4f transform;
 	bool          use_pointer = true;
 

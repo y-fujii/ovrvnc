@@ -19,8 +19,8 @@
  
  #if defined( OVR_OS_ANDROID )
  #define GL_COMPRESSED_RGBA_ASTC_4x4_KHR   0x93B0
---- ovr_mobile_sdk_117/VrApp.gradle	2018-08-25
-+++ ovr_mobile_sdk_117/VrApp.gradle	2018-09-09
+--- ovr_mobile_sdk_117/VrApp.gradle
++++ ovr_mobile_sdk_117/VrApp.gradle
 @@ -114,7 +114,7 @@
  			  }
  			  ndkBuild {
