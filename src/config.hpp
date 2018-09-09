@@ -14,6 +14,7 @@ struct config_t {
 		std::string password;
 		float       latitude    = 0.0f;
 		float       longitude   = 0.0f;
+		float       radius      = 1.0f;
 		bool        lossy       = true;
 		bool        use_pointer = true;
 	};
@@ -50,6 +51,7 @@ inline config_t config_load( std::string const& fn ) {
 				screen->get_as<std::string>( "password" ).value_or( d.password ),
 				float( screen->get_as<double>( "latitude"  ).value_or( d.latitude ) ),
 				float( screen->get_as<double>( "longitude" ).value_or( d.longitude ) ),
+				float( screen->get_as<double>( "radius"  ).value_or( d.radius ) ),
 				screen->get_as<bool>( "lossy" ).value_or( d.lossy ),
 				screen->get_as<bool>( "use_pointer" ).value_or( d.use_pointer )
 			} );
