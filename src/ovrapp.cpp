@@ -37,7 +37,8 @@ struct application_t: OVR::VrAppInterface {
 
 			for( auto const& screen: _config.screens ) {
 				auto vnc = std::make_unique<vnc_layer_t>();
-				vnc->resolution = _config.resolution;
+				vnc->resolution   = _config.resolution / screen.pixel_scaling;
+				vnc->mipmap_level = std::max( int( 2.5f - std::log2( screen.pixel_scaling ) ), 1 );
 				vnc->transform =
 					OVR::Matrix4f::RotationY( float( M_PI / 180.0 ) * screen.longitude ) *
 					OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * screen.latitude  ) *
