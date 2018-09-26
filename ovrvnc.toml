@@ -10,7 +10,7 @@ latitude  = -15.0
 #longitude = 0.0
 #lossy = true
 use_pointer = false
-pixel_scaling = 0.5
+#pixel_scaling = 1.0
 
 #[[screens]]
 #host = "192.168.179.4"

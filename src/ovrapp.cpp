@@ -27,7 +27,7 @@ struct application_t: OVR::VrAppInterface {
 		settings.RenderMode         = OVR::RENDERMODE_MULTIVIEW;
 		settings.TrackingTransform  = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 		settings.CpuLevel           = 3;
-		settings.GpuLevel           = _config.bg_image.empty() ? 0 : 2;
+		settings.GpuLevel           = 2;
 	}
 
 	virtual void EnteredVrMode( OVR::ovrIntentType const intent_type, char const*, char const*, char const* ) override {

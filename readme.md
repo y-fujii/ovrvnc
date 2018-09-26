@@ -49,6 +49,7 @@ More complex example:
 	#longitude = 0.0
 	#lossy = true
 	use_pointer = false
+	#pixel_scaling = 1.0
 
 	[[screens]]
 	host = "192.168.179.4"

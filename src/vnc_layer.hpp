@@ -127,7 +127,7 @@ struct vnc_layer_t {
 	}
 
 	float         resolution   = std::numeric_limits<float>::quiet_NaN(); // [pixels / pi radians].
-	unsigned      mipmap_level = 0;
+	unsigned      mipmap_level = 1;
 	OVR::Matrix4f transform;
 	bool          use_pointer  = true;
 
