@@ -27,7 +27,7 @@ struct application_t: OVR::VrAppInterface {
 		settings.RenderMode         = OVR::RENDERMODE_MULTIVIEW;
 		settings.TrackingTransform  = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
 		settings.CpuLevel           = 3;
-		settings.GpuLevel           = 2;
+		settings.GpuLevel           = 0;
 	}
 
 	virtual void EnteredVrMode( OVR::ovrIntentType const intent_type, char const*, char const*, char const* ) override {
@@ -37,8 +37,7 @@ struct application_t: OVR::VrAppInterface {
 
 			for( auto const& screen: _config.screens ) {
 				auto vnc = std::make_unique<vnc_layer_t>();
-				vnc->resolution   = _config.resolution / screen.pixel_scaling;
-				vnc->mipmap_level = std::max( int( 2.5f - std::log2( screen.pixel_scaling ) ), 1 );
+				vnc->resolution = _config.resolution / screen.pixel_scaling;
 				vnc->transform =
 					OVR::Matrix4f::RotationY( float( M_PI / 180.0 ) * screen.longitude ) *
 					OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * screen.latitude  ) *
