@@ -1,0 +1,22 @@
+diff --git a/VrApp.gradle b/VrApp.gradle
+index f0a3d11..3a57b1c 100755
+--- a/VrApp.gradle
++++ b/VrApp.gradle
+@@ -317,7 +317,7 @@ class GenDebugKeystore extends DefaultTask {
+     @TaskAction
+     genDebugKeystore() {
+         if ( !project.file("android.debug.keystore").exists() ) {
+-            def pythonCmd = 'python'
++            def pythonCmd = 'python2'
+             if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                 pythonCmd = "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_keystore.py.bat"
+                 project.exec {
+@@ -356,7 +356,7 @@ class BuildSDKLibs extends DefaultTask {
+                 buildType
+             }
+         } else {
+-            def pythonCmd = 'python'
++            def pythonCmd = 'python2'
+             project.exec {
+                 commandLine pythonCmd,
+                 "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_sdklibs.py",
