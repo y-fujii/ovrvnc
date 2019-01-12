@@ -20,7 +20,7 @@ index 2b08dbf9..09687a85 100644
  #endif
  
 diff --git a/common/rfb/JpegDecompressor.cxx b/common/rfb/JpegDecompressor.cxx
-index 4f94faa8..bd96fca3 100644
+index 4f94faa8..2bb97b17 100644
 --- a/common/rfb/JpegDecompressor.cxx
 +++ b/common/rfb/JpegDecompressor.cxx
 @@ -24,13 +24,6 @@
@@ -37,7 +37,7 @@ index 4f94faa8..bd96fca3 100644
  using namespace rfb;
  
  //
-@@ -46,14 +39,7 @@ static const PixelFormat pfXBGR(32, 24, false, true, 255, 255, 255, 24, 16, 8);
+@@ -46,25 +39,17 @@ static const PixelFormat pfXBGR(32, 24, false, true, 255, 255, 255, 24, 16, 8);
  // Error manager implementation for the JPEG library
  //
  
@@ -49,21 +49,25 @@ index 4f94faa8..bd96fca3 100644
 -
 -static void
 -JpegErrorExit(j_common_ptr dinfo)
-+void JpegDecompressor::JpegErrorExit(j_common_ptr dinfo)
++void JpegDecompressor::errorExit(j_common_ptr dinfo)
  {
-   JPEG_ERROR_MGR *err = (JPEG_ERROR_MGR *)dinfo->err;
+-  JPEG_ERROR_MGR *err = (JPEG_ERROR_MGR *)dinfo->err;
++  ErrorMgr *err = (ErrorMgr *)dinfo->err;
  
-@@ -61,8 +47,7 @@ JpegErrorExit(j_common_ptr dinfo)
+   (*dinfo->err->output_message)(dinfo);
    longjmp(err->jmpBuffer, 1);
  }
  
 -static void
 -JpegOutputMessage(j_common_ptr dinfo)
-+void JpegDecompressor::JpegOutputMessage(j_common_ptr dinfo)
++void JpegDecompressor::outputMessage(j_common_ptr dinfo)
  {
-   JPEG_ERROR_MGR *err = (JPEG_ERROR_MGR *)dinfo->err;
+-  JPEG_ERROR_MGR *err = (JPEG_ERROR_MGR *)dinfo->err;
++  ErrorMgr *err = (ErrorMgr *)dinfo->err;
  
-@@ -74,25 +59,17 @@ JpegOutputMessage(j_common_ptr dinfo)
+   (*dinfo->err->format_message)(dinfo, err->lastError);
+ }
+@@ -74,27 +59,19 @@ JpegOutputMessage(j_common_ptr dinfo)
  // Source manager implementation for the JPEG library.
  //
  
@@ -74,13 +78,13 @@ index 4f94faa8..bd96fca3 100644
 -
 -static void
 -JpegNoOp(j_decompress_ptr dinfo)
-+void JpegDecompressor::JpegNoOp(j_decompress_ptr dinfo)
++void JpegDecompressor::noOp(j_decompress_ptr dinfo)
  {
  }
  
 -static boolean
 -JpegFillInputBuffer(j_decompress_ptr dinfo)
-+boolean JpegDecompressor::JpegFillInputBuffer(j_decompress_ptr dinfo)
++boolean JpegDecompressor::fillInputBuffer(j_decompress_ptr dinfo)
  {
    ERREXIT(dinfo, JERR_BUFFER_SIZE);
    return TRUE;
@@ -88,10 +92,13 @@ index 4f94faa8..bd96fca3 100644
  
 -static void
 -JpegSkipInputData(j_decompress_ptr dinfo, long num_bytes)
-+void JpegDecompressor::JpegSkipInputData(j_decompress_ptr dinfo, long num_bytes)
++void JpegDecompressor::skipInputData(j_decompress_ptr dinfo, long num_bytes)
  {
-   JPEG_SRC_MGR *src = (JPEG_SRC_MGR *)dinfo->src;
+-  JPEG_SRC_MGR *src = (JPEG_SRC_MGR *)dinfo->src;
++  SrcMgr *src = (SrcMgr *)dinfo->src;
  
+   if (num_bytes < 0 || (size_t)num_bytes > src->pub.bytes_in_buffer) {
+     ERREXIT(dinfo, JERR_BUFFER_SIZE);
 @@ -106,44 +83,35 @@ JpegSkipInputData(j_decompress_ptr dinfo, long num_bytes)
  
  JpegDecompressor::JpegDecompressor(void)
@@ -99,8 +106,8 @@ index 4f94faa8..bd96fca3 100644
 -  dinfo = new jpeg_decompress_struct;
 +  dinfo.err = jpeg_std_error(&err.pub);
 +  snprintf(err.lastError, JMSG_LENGTH_MAX, "No error");
-+  err.pub.error_exit = JpegErrorExit;
-+  err.pub.output_message = JpegOutputMessage;
++  err.pub.error_exit = errorExit;
++  err.pub.output_message = outputMessage;
  
 -  err = new struct JPEG_ERROR_MGR;
 -  dinfo->err = jpeg_std_error(&err->pub);
@@ -126,11 +133,11 @@ index 4f94faa8..bd96fca3 100644
 -  src->pub.term_source = JpegNoOp;
 -  src->instance = this;
 -  dinfo->src = (struct jpeg_source_mgr *)src;
-+  src.pub.init_source = JpegNoOp;
-+  src.pub.fill_input_buffer = JpegFillInputBuffer;
-+  src.pub.skip_input_data = JpegSkipInputData;
++  src.pub.init_source = noOp;
++  src.pub.fill_input_buffer = fillInputBuffer;
++  src.pub.skip_input_data = skipInputData;
 +  src.pub.resync_to_restart = jpeg_resync_to_restart;
-+  src.pub.term_source = JpegNoOp;
++  src.pub.term_source = noOp;
 +  src.instance = this;
 +  dinfo.src = (struct jpeg_source_mgr *)&src;
  }
@@ -246,7 +253,7 @@ index 4f94faa8..bd96fca3 100644
    if (dstBufIsTemp) delete [] dstBuf;
    delete[] rowPointer;
 diff --git a/common/rfb/JpegDecompressor.h b/common/rfb/JpegDecompressor.h
-index ed367786..3acfaab0 100644
+index ed367786..de77cf3e 100644
 --- a/common/rfb/JpegDecompressor.h
 +++ b/common/rfb/JpegDecompressor.h
 @@ -28,11 +28,12 @@
@@ -277,26 +284,26 @@ index ed367786..3acfaab0 100644
 -    struct JPEG_ERROR_MGR *err;
 -    struct JPEG_SRC_MGR *src;
 -
-+    struct JPEG_ERROR_MGR {
++    struct ErrorMgr {
 +      jpeg_error_mgr pub;
 +      jmp_buf jmpBuffer;
 +      char lastError[JMSG_LENGTH_MAX];
 +    };
 +
-+    struct JPEG_SRC_MGR {
++    struct SrcMgr {
 +      jpeg_source_mgr pub;
 +      JpegDecompressor *instance;
 +    };
 +
-+    static void JpegErrorExit(j_common_ptr);
-+    static void JpegOutputMessage(j_common_ptr);
-+    static void JpegNoOp(j_decompress_ptr);
-+    static boolean JpegFillInputBuffer(j_decompress_ptr);
-+    static void JpegSkipInputData(j_decompress_ptr, long);
++    static void errorExit(j_common_ptr);
++    static void outputMessage(j_common_ptr);
++    static void noOp(j_decompress_ptr);
++    static boolean fillInputBuffer(j_decompress_ptr);
++    static void skipInputData(j_decompress_ptr, long);
 +
 +    jpeg_decompress_struct dinfo;
-+    JPEG_ERROR_MGR err;
-+    JPEG_SRC_MGR src;
++    ErrorMgr err;
++    SrcMgr src;
    };
  
  } // end of namespace rfb
@@ -342,7 +349,7 @@ index 5a40379a..c9de81ed 100644
  }
  
 diff --git a/common/rfb/TightDecoder.cxx b/common/rfb/TightDecoder.cxx
-index cc786f5b..285836d8 100644
+index 3a1254a2..285836d8 100644
 --- a/common/rfb/TightDecoder.cxx
 +++ b/common/rfb/TightDecoder.cxx
 @@ -200,6 +200,7 @@ void TightDecoder::decodeRect(const Rect& r, const void* buffer,
@@ -412,7 +419,7 @@ index cc786f5b..285836d8 100644
 -    outbuf = pb->getBufferRW(r, &stride);
 +    outptr = pb->getBufferRW(r, &stride);
    else {
--    outbuf = new rdr::U8[r.area() * (pf.bpp/8)];
+-    outbuf = new rdr::U8[r.area() * pf.bpp/8];
 +    outbuf[streamId].resize(r.area() * (pf.bpp/8));
 +    outptr = outbuf[streamId].data();
      stride = r.width();
