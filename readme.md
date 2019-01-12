@@ -57,6 +57,8 @@ More complex example:
 	latitude  = -15.0
 	longitude = 180.0
 
+Try to stop a compositor (compton, etc.) when you see tearing.
+
 ## Performance
 
 Although RFB protocol is old, I think it is still a simple and good protocol.
@@ -81,15 +83,25 @@ See also [mfxvnc](http://github.com/y-fujii/mfxvnc/).
 
 ## Build
 
-XXX: Apply patches.
+XXX: more explanation.
 
 	export     ANDROID_HOME=...
 	export ANDROID_NDK_HOME=...
 	export  OCULUS_SDK_PATH=...
 
+	$ANDROID_HOME/tools/sdkmanager "build-tools;27.0.3" "platforms;android-21"
+
+	cd $OCULUS_SDK_PATH
+	patch -p1 -i ../../patch/oculus_mobile_sdk_120.patch
+	cd -
+
+	cd thirdparty/tigervnc
+	patch -p1 -i ../../patch/tigervnc_optimized_unstable.patch
+	cd -
+
 	cd thirdparty/libjpeg-turbo
 	./build.sh
-	cd ../..
+	cd -
 	make
 
 ## License
