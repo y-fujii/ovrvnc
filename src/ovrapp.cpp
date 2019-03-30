@@ -25,7 +25,7 @@ struct application_t: OVR::VrAppInterface {
 	virtual void Configure( OVR::ovrSettings& settings ) override {
 		settings.UseSrgbFramebuffer = true;
 		settings.RenderMode         = OVR::RENDERMODE_MULTIVIEW;
-		settings.TrackingTransform  = VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_EYE_LEVEL;
+		settings.TrackingSpace      = VRAPI_TRACKING_SPACE_LOCAL;
 		settings.CpuLevel           = 3;
 		settings.GpuLevel           = 0;
 	}

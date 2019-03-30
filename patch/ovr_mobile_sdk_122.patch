@@ -1,8 +1,17 @@
-diff --git a/VrApp.gradle.org b/VrApp.gradle
-index 5195ab1..835f12d 100755
---- a/VrApp.gradle.org
+--- a/VrAppFramework/Projects/Android/build.gradle
++++ b/VrAppFramework/Projects/Android/build.gradle
+@@ -67,7 +67,7 @@
+ 
+ task( "cleanWorkAround" ) {
+     description "Workaround for .externalNativeBuild not being deleted on clean"
+-} << {
++} doLast {
+     project.delete project.file( ".externalNativeBuild" )
+ }
+ 
+--- a/VrApp.gradle
 +++ b/VrApp.gradle
-@@ -95,7 +95,7 @@ class VrAppPlugin implements Plugin<Project> {
+@@ -95,7 +95,7 @@
      // FIXME: The Task.leftShift(Closure) method has been deprecated and is scheduled to be removed in Gradle 5.0. Please use Task.doLast(Action) instead.
      project.task( "cleanWorkAround" ) {
  	  description "Workaround for .externalNativeBuild not being deleted on clean"
@@ -11,7 +20,7 @@ index 5195ab1..835f12d 100755
  	  project.delete project.file( ".externalNativeBuild" )
      }
  
-@@ -198,7 +198,7 @@ class VrAppPlugin implements Plugin<Project> {
+@@ -198,7 +198,7 @@
  
    project.afterEvaluate {
  
@@ -20,7 +29,7 @@ index 5195ab1..835f12d 100755
          project.ext.deviceMap = [ : ]
          if (project.hasProperty( "should_install" ) == true || project.hasProperty( "disable_sig_check" ) == false) {
              AndroidDebugBridge.initIfNeeded( false )
-@@ -225,7 +225,7 @@ class VrAppPlugin implements Plugin<Project> {
+@@ -225,7 +225,7 @@
  
        project.task( "stopApk", dependsOn: initDeviceList ) {
            description "Stops app if currently running on device"
@@ -29,7 +38,7 @@ index 5195ab1..835f12d 100755
            project.deviceMap.each { deviceSerial, device ->
            stopApk( device, android.defaultConfig.applicationId )
          }
-@@ -237,7 +237,7 @@ class VrAppPlugin implements Plugin<Project> {
+@@ -237,7 +237,7 @@
              project.deviceMap.size() != 0 &&
              project.hasProperty( "disable_sig_check" ) == false
            }
@@ -38,7 +47,7 @@ index 5195ab1..835f12d 100755
            def iterator = project.deviceMap.entrySet().iterator()
            while ( iterator.hasNext() ) { 
              def deviceElem = iterator.next()
-@@ -264,7 +264,7 @@ class VrAppPlugin implements Plugin<Project> {
+@@ -264,7 +264,7 @@
              project.hasProperty( "disable_sig_check" ) == false
            }
            dependsOn project.OSigPreCheck
@@ -47,7 +56,7 @@ index 5195ab1..835f12d 100755
              def sigfiles = project.zipTree( output.outputFile ).matching{ include "assets/oculussig*" }
              def iterator = project.deviceMap.entrySet().iterator()
              while ( iterator.hasNext() ) { 
-@@ -285,7 +285,7 @@ class VrAppPlugin implements Plugin<Project> {
+@@ -285,7 +285,7 @@
            dependsOn OSigPostCheck
            onlyIf { project.hasProperty( "should_install" ) }
            description "Installs and runs the APK file"
@@ -56,7 +65,7 @@ index 5195ab1..835f12d 100755
              if ( output.outputFile.exists() )
              {
                if ( project.deviceMap.size() == 0 ) {
-@@ -317,7 +317,7 @@ class GenDebugKeystore extends DefaultTask {
+@@ -317,7 +317,7 @@
      @TaskAction
      genDebugKeystore() {
          if ( !project.file("android.debug.keystore").exists() ) {
@@ -65,7 +74,7 @@ index 5195ab1..835f12d 100755
              if (Os.isFamily(Os.FAMILY_WINDOWS)) {
                  pythonCmd = "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_keystore.py.bat"
                  project.exec {
-@@ -356,7 +356,7 @@ class BuildSDKLibs extends DefaultTask {
+@@ -356,7 +356,7 @@
                  buildType
              }
          } else {
@@ -74,23 +83,10 @@ index 5195ab1..835f12d 100755
              project.exec {
                  commandLine pythonCmd,
                  "${project.rootProject.projectDir}/bin/scripts/build/ovrbuild_sdklibs.py",
-@@ -396,4 +396,4 @@ project.tasks.whenTaskAdded { task ->
+@@ -396,4 +396,4 @@
      }
  }
  
 -apply plugin: VrAppPlugin
 \ No newline at end of file
 +apply plugin: VrAppPlugin
-diff --git a/VrLib.gradle.org b/VrLib.gradle
-index 343968e..b996f87 100755
---- a/VrLib.gradle.org
-+++ b/VrLib.gradle
-@@ -6,7 +6,7 @@ class VrLibPlugin implements Plugin<Project> {
- 
-     project.task( "cleanWorkAround" ) {
-       description "Workaround for .externalNativeBuild not being deleted on clean"
--    } << {
-+    } doLast {
-       project.delete project.file( ".externalNativeBuild" )
-     }
- 

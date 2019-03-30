@@ -15,10 +15,6 @@ namespace std {
 
 struct vnc_layer_t {
 	~vnc_layer_t() {
-		// GL context may not be available.
-		if( glDeleteFramebuffers == nullptr ) {
-			return;
-		}
 		if( _back_fbo != 0 ) {
 			glDeleteFramebuffers( 1, &_back_fbo );
 		}
