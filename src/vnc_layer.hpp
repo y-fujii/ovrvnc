@@ -50,8 +50,9 @@ struct vnc_layer_t {
 			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, _back_fbo );
 			glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, btex, 0 );
 
+			int const level = 1 + int( std::floor( std::log2( std::max( region.w, region.h ) ) ) );
 			_frnt_chain = std::unique_ptr<ovrTextureSwapChain>( vrapi_CreateTextureSwapChain3(
-				VRAPI_TEXTURE_TYPE_2D, GL_SRGB8_ALPHA8, region.w, region.h, 1, 1
+				VRAPI_TEXTURE_TYPE_2D, GL_SRGB8_ALPHA8, region.w, region.h, use_mipmap ? level : 1, 1
 			) );
 			unsigned const ftex = vrapi_GetTextureSwapChainHandle( _frnt_chain.get(), 0 );
 			glBindTexture( GL_TEXTURE_2D, ftex );
@@ -60,7 +61,7 @@ struct vnc_layer_t {
 			GLfloat borderColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 			glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
 			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, use_mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR );
 			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 2.0f );
 			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, _frnt_fbo );
 			glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ftex, 0 );
@@ -88,6 +89,11 @@ struct vnc_layer_t {
 				region.x0, region.y0, region.x1, region.y1,
 				GL_COLOR_BUFFER_BIT, GL_NEAREST
 			);
+
+			if( use_mipmap ) {
+				glBindTexture( GL_TEXTURE_2D, vrapi_GetTextureSwapChainHandle( _frnt_chain.get(), 0 ) );
+				glGenerateMipmap( GL_TEXTURE_2D );
+			}
 		}
 
 		glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 );
@@ -152,6 +158,7 @@ struct vnc_layer_t {
 	float         resolution  = std::numeric_limits<float>::quiet_NaN(); // [pixels / pi radians].
 	OVR::Matrix4f transform;
 	bool          use_pointer = true;
+	bool          use_mipmap  = false;
 
 private:
 	int                                  _size_w = 0;

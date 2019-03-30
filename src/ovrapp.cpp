@@ -43,6 +43,7 @@ struct application_t: OVR::VrAppInterface {
 					OVR::Matrix4f::RotationX( float( M_PI / 180.0 ) * screen.latitude  ) *
 					OVR::Matrix4f::Scaling( 10.0f );
 				vnc->use_pointer = screen.use_pointer;
+				vnc->use_mipmap  = screen.pixel_scaling < 1.0;
 				vnc->run( screen.host, screen.port, screen.password, screen.lossy );
 				_vnc_layers.push_back( std::move( vnc ) );
 			}
